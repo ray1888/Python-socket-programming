@@ -17,6 +17,7 @@ while state:
     print(result)
     if result == b"0":
         state = False
+        print("you are quit")
 
 
 
