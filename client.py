@@ -5,6 +5,7 @@ port = 8101
 s.connect(("127.0.0.1", port))
 content = s.recv(1024)
 print(content)
+print(s)
 state = True
 
 while state:

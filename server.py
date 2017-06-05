@@ -4,11 +4,10 @@ s = socket.socket()
 port = 8101
 s.bind(("127.0.0.1", port))
 s.listen(5)
-
+print("sockets={}".format(s))
 c, addr = s.accept()
-print(type(c))
-print(addr)
-print(c)
+print("addr={}".format(addr))
+print("socketc={}".format(c))
 ##print('get connect from'+ addr)
 c.send(b'You are already connect in server')
 
