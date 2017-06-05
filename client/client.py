@@ -1,9 +1,9 @@
 import socket
 import json
 
-s = socket.socket()
+
 port = 8101
-s.connect(("127.0.0.1", port))
+
 content = s.recv(1024)
 print(content)
 print(s)
@@ -33,5 +33,8 @@ class Control():
 		return (host,port)
 
 	def connect(self):
+		host,port = getconfig()
+		s = socket.socket()
+		s.connect((host, port))
 		
 
