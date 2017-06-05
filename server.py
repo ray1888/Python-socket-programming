@@ -3,6 +3,7 @@ import os
 import sys
 import threading
 import random
+import re
 
 while True:
     rec_str = c.recv(1024)
@@ -51,6 +52,7 @@ class Action():
                     c.send(b'File Transfer Finish')
                     break
 
+    '''
     def lsdir(self,c):
         dir_list = os.listdir(self.workdir)
         con_len = sys.getsizeof(dir_list)
@@ -61,6 +63,7 @@ class Action():
                 c.send(dir_list_div)
         else:
             c.send(dir_list)
+    '''
 
     def mkdir(self,c,new_name):
         try:
@@ -73,13 +76,10 @@ class Action():
         path = os.getcwd()
         c.send(bytes(path))
 
-
+    '''
     def chdir(self,path_son):
-
         os.chdir(self.workdir+)
-
-
-
+    '''
 
 class Control():
     def __init__(self,ip,s,dir,mode):
@@ -96,13 +96,32 @@ class Control():
         print("socketc={}".format(c))
         c.send(b'You are already connect in server')
 
-    def quit(self,c):
-        rec_str = c.recv(1024)
-        if rec_str == b'quit' or rec_str == b'q':
-            print("out")
-            c.send(bytes('0', encoding="utf-8"))
-            c.close()
-            break
+    def action(self,c):
+       while True:
+           act = c.recv(1024)
+           A = Action()
+           if act == "lsdir":
+               A.lsdir(c)
+           if re.match("mkdir",act):
+               splita = act.split(":")
+               dirname = splita[1]
+               A.mkdir(dirname,c)
+           if re.match("download",act):
+               splita = act.split(":")
+               file = splita[1]
+               A.download(file,c)
+           if re.match("upload",act):
+               splita = act.split(":")
+               file = splita[1]
+               A.upload(file,c)
+           if act == 'quit':
+               print("out")
+               c.send(bytes('0', encoding="utf-8"))
+               c.close()
+               break
+
+
+
 
 
 
