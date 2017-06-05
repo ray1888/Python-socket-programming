@@ -5,17 +5,6 @@ import threading
 import random
 import re
 
-while True:
-    rec_str = c.recv(1024)
-    print(c)
-    print('rec_str={}'.format(rec_str))
-    if rec_str == b'quit' or rec_str == b'q':
-        print("out")
-        c.send(bytes('0',encoding="utf-8"))
-        c.close()
-        break
-    else:
-        c.send(bytes('try another cmd ,it not dead', encoding="utf-8"))
 
 class Action():
     def __init__(self,mode,workdir):
@@ -52,18 +41,21 @@ class Action():
                     c.send(b'File Transfer Finish')
                     break
 
-    '''
+    
     def lsdir(self,c):
         dir_list = os.listdir(self.workdir)
         con_len = sys.getsizeof(dir_list)
-        if (con_len%1024) != 0 and (con_len/1024) != 0:
+        if (con_len%1024) != 0 and (con_len/1024) != 0:   #进行判断，防止list的目录大于1024字节，保证能够传完
             times = con_len/1024
-            for i in range(times+1):
-                dir_list_div = dir_list
-                c.send(dir_list_div)
+            with open(workdir+'/tmp.txt',"wb") as f:
+              f.write(dir_list)
+            with open(workdir+'/tmp.txt',"rb") as f:
+              for i in range(times+1):
+                  dir_list_div = f.read(1024)
+                  c.send(dir_list_div)
         else:
             c.send(dir_list)
-    '''
+    
 
     def mkdir(self,c,new_name):
         try:
@@ -99,7 +91,7 @@ class Control():
     def action(self,c):
        while True:
            act = c.recv(1024)
-           A = Action()
+           A = Action(self.workdir,self.mode)
            if act == "lsdir":
                A.lsdir(c)
            if re.match("mkdir",act):

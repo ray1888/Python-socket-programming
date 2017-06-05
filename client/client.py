@@ -1,4 +1,5 @@
 import socket
+import json
 
 s = socket.socket()
 port = 8101
@@ -20,5 +21,17 @@ while state:
         print("you are quit")
 
 
+class Control():
+
+	def getconfig(self):
+		Path = os.getcwd()
+		with open(Path+'/clientconfig.json','r') as f:
+			config = f.read()
+			config = json.loads(config)
+			host = config["host"]
+			port = config["port"]
+		return (host,port)
+
+	def connect(self):
 
 
