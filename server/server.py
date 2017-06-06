@@ -8,13 +8,13 @@ import re
 
 class Action():
     def __init__(self,mode,workdir):
+        self.ts = socket.socket()
         self.mode = mode
         self.workdir = workdir
         if self.mode == b"active":
             self.port = 20
         else:
             self.port=random.randint(1024,65535)
-
 
     def CreateSocket(self):
 
@@ -78,15 +78,17 @@ class Action():
 
 class Control():
     def __init__(self,ip,s,dir,mode):
-        ##s = socket.socket()
+        self.s = socket.socket()
+        Eatabalish()
         self.workdir = dir
+
+    def Eatabalish(self,s):
         ip = str(ip)
-        port=21
+        port='21'
         s.bind((ip, port))
         s.listen(5)
-
-    def Eatabalish(self,s,c):
-        ##c, addr = s.accept()
+        c, addr = s.accept()
+        self.conn = c
         print("addr={}".format(addr))
         print("socketc={}".format(c))
         c.send(b'You are already connect in server')
