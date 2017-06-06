@@ -2,13 +2,14 @@ import socket
 import os
 import sys
 import re
+import random
 
 class Control():
     def __init__(self):
-        self.sock = socket.socket()
+        self.s = socket.socket()
         self.pwd = os.getcwd()
-        self.Connect(self.sock)
-        self.CmdRec(self.sock, self.mode, self.rmaddr, self.host)
+        self.Connect(self.s)
+        self.CmdRec(self.s, self.mode, self.rmaddr, self.host)
 
     def Connect(self, s):
         host = "127.0.0.1"
@@ -19,6 +20,7 @@ class Control():
         self.conn = c
         c.send(b"Welcome to the FTP server")
         mode = c.recv(1024)
+        print(mode)
         self.mode = mode
         rmport = addr[1]
         rmaddr = addr[0]
@@ -32,11 +34,13 @@ class Control():
         return tranport  #tp为主动模式下被服务器连接的端口
 
     def CmdRec(self, s, mode, chost, laddr=None):
+        print(s.getsockname())
         cmd = s.recv(1024)
         print(cmd)
         if mode == b"PASV":  #被动模式
-            tport = CreatPort()  # tport是传输信道的端口
-            s.send(tport)
+            tport = self.CreatPort()  # tport是传输信道的端口
+            print("peer={}".format(s.getpeername()))
+            s.send(bytes(str(tport), encoding="utf-8"))
             tsactive0 = socket.socket()  # tsactive0为等待对方进入的socket
             tsactive0.bind((laddr, tport))
             tsactive0.listen(5)
