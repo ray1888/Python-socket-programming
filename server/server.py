@@ -15,6 +15,9 @@ class Action():
         else:
             self.port=random.randint(1024,65535)
 
+
+    def CreateSocket(self):
+
     def upload(self,filename,c):
         with open(workdir+'filename','ab') as f:
             while True:
