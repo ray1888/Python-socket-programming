@@ -10,7 +10,7 @@ class Control():
 		self.s = socket.socket()   #此处s为控制信道的socket
 		self.pwd = os.getcwd()
 		self.Connect(self.s)
-		self.InputCmd(self.s)
+		self.InputCmd(self.s,self.host)
 
 	def Getconfig(self):
 		Path = os.getcwd()
@@ -19,7 +19,8 @@ class Control():
 			config = json.loads(config)
 			host = config["host"]
 			port = config["port"]
-		return (host,port)
+			self.host = host
+			self.sport = port
 
 	def Connect(self,socket):
 		host,port = getconfig()
@@ -34,7 +35,7 @@ class Control():
 		else:
 			return dataport
 
-	def InputCmd(self,socket):   #此处使用的是控制信道
+	def InputCmd(self,socket,port):   #此处使用的是控制信道
 		state = True
 		addr, socport = socket.getsockname()
 		dataport = Createport()
