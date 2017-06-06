@@ -81,14 +81,16 @@ class Control():
         self.s = socket.socket()
         Eatabalish()
         self.workdir = dir
+        self.action(self.conn)
 
     def Eatabalish(self,s):
         ip = str(ip)
         port='21'
         s.bind((ip, port))
         s.listen(5)
-        c, addr = s.accept()
-        self.conn = c
+        conn, addr = s.accept()
+        self.conn = conn
+        c = self.conn
         print("addr={}".format(addr))
         print("socketc={}".format(c))
         c.send(b'You are already connect in server')
