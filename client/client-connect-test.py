@@ -10,6 +10,7 @@ class Control():
         self.pwd = os.getcwd()
         self.Modeselection()
         self.Connect(self.s, self.mode)
+        self.InputCmd(self.s, self.mode, self.host, self.lport, self.addr)
 
     def Modeselection(self):
         mode = input("请输入模式，主动输入ACT，被动输入PASV")
@@ -18,31 +19,38 @@ class Control():
         else:
             self.mode = mode
 
-    def Connect(self,socket,mode):
+    def Connect(self, s, mode):
         print(mode)
         host = "127.0.0.1"
         port = 21
         self.host = host
-        socket.connect((host, port))
-        welcome = socket.recv(1024)
+        s.connect((host, port))
+        welcome = s.recv(1024)
         print(welcome)
-        a, lport = socket.getsockname()
+        modemsg = bytes(mode, encoding="utf-8")
+        s.send(modemsg)
+        a, lport = s.getsockname()
         self.lport = lport
         self.addr = a
 
-    def CreatPort(self,localport):
+    def CreatPort(self, localport):
         tranport = random.randint(4096,65535)
         if tranport == localport:
             CreatPort()
         else:
             return tranport  #tp为主动模式下被服务器连接的端口
 
-    def InputCmd(self,socket,mode,shost,lport=None,laddr=None):
-        cmd = raw_input("请输入命令")
+    def InputCmd(self, s, mode, shost, lport=None, laddr=None):
+        cmd = input("请输入命令")
+        s.send(bytes(cmd, encoding="utf-8"))
+        print("cmd sent")
         if mode == "PASV":  #被动模式
-            serverport = socket.recv(1024)
+            serverport = s.recv(1024)
+            print(serverport)
             ts = socket.socket()
             ts.connect((shost, serverport))
+            msg = ts.recv(1024)
+            print(msg)
             self.tssock = ts
 
         else:  #主动模式
@@ -53,6 +61,7 @@ class Control():
             tsactive1, addrr =tsactive0.accept()
             self.tssock = tsactive1
             msg_tun = tsactive1.recv(1024)
+            print(msg_tun)
 
 
 
