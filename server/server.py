@@ -6,17 +6,31 @@ import random
 import re
 
 
-class Action():
-    def __init__(self,mode,workdir):
+class Action():               #进行数据传输及操作定义
+    def __init__(self,mode,workdir,caddr,addr,cport=None):  #caddr为客户端的ip，addr为本机的外网ip
         self.ts = socket.socket()
         self.mode = mode
         self.workdir = workdir
-        if self.mode == b"active":
+        self.caddr = caddr
+        self.addr = addr
+        if self.mode == b"active":         #主动模式
             self.port = 20
+            ActConn(self.ts,self.port)
         else:
-            self.port=random.randint(1024,65535)
+            self.port=random.randint(63500,65535)   #被动模式
+            PasvConn(self.ts,self.port)
 
-    def CreateSocket(self):
+    def PasvConn(self,socket,port):
+        socket.bind(("0.0.0.0",port))
+        socket.listen(5)
+        conn ,cliaddr = socket.accept
+        self.connts = conn 
+
+
+    def ActConn(self,socket,port,cport):
+        socket.bind(("",port))
+        socket.connect((caddr,cport))
+
 
     def upload(self,filename,c):
         with open(workdir+'filename','ab') as f:
@@ -76,11 +90,11 @@ class Action():
         os.chdir(self.workdir+)
     '''
 
-class Control():
-    def __init__(self,ip,s,dir,mode):
+class Control():    #控制通道
+    def __init__(self,ip,s,mode):
+        self.dir = os.getcwd()
         self.s = socket.socket()
         Eatabalish()
-        self.workdir = dir
         self.action(self.conn)
 
     def Eatabalish(self,s):
@@ -94,11 +108,19 @@ class Control():
         print("addr={}".format(addr))
         print("socketc={}".format(c))
         c.send(b'You are already connect in server')
+        mode = c.recv(1024) 
+        """
+        传输模式需要进行调试
+        """
+        self.mode = mode
+        if mode == "PASV"
+          cport = c.recv(1024)
+          self.cport = cport
 
     def action(self,c):
        while True:
            act = c.recv(1024)
-           A = Action(self.workdir,self.mode)
+           A = Action(self.mode,self.dir)
            if act == "lsdir":
                A.lsdir(c)
            if re.match("mkdir",act):
