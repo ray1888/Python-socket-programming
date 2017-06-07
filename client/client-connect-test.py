@@ -46,6 +46,7 @@ class Control():
         cmd = input("请输入命令")
         self.s.send(bytes(cmd, encoding="utf-8"))
         print("cmd sent")
+
         if mode == "PASV":  #被动模式,数据通道传输模式
             serverport = self.s.recv(1024)
             serverport = int(serverport)
@@ -55,12 +56,12 @@ class Control():
             msg = tunnel_sock.recv(1024)
             print(msg)
             self.tunnel_sock = tunnel_sock
-            if re.match("put", cmd):   #此处输入的命令为"upload 绝对路径/文件"
+            if re.match("put", cmd):   #此处输入的命令为"put 绝对路径/文件"
                 cmd_split = cmd.split(" ")
                 filename = cmd_split[1]
                 filesize = os.path.getsize(filename)
                 self.send(self.tunnel_sock, filename, filesize)
-            elif re.match("get", cmd): #此处输入的命令为"download 文件"
+            elif re.match("get", cmd): #此处输入的命令为"get 文件"
                 cmd_split = cmd.split(" ")
                 filename = cmd_split[1]
                 self.receive(self.tunnel_sock, filename)
@@ -78,15 +79,15 @@ class Control():
             self.tunnel_sock_active = tunnel_sock_active
             msg_tun = self.tunnel_sock_active.recv(1024)
             print(msg_tun)
-            if re.match("put", cmd):   #此处输入的命令为"upload 绝对路径/文件"
+            if re.match("put", cmd):   #此处输入的命令为"put 绝对路径/文件"
                 cmd_split = cmd.split(" ")
                 filename = cmd_split[1]
                 filesize = os.path.getsize(filename)
-                self.send(self.tunnel_sock, filename, filesize)
-            elif re.match("get", cmd):  #此处输入的命令为"download 文件"
+                self.send(self.tunnel_sock, filename, filesize, self.s)
+            elif re.match("get", cmd):  #此处输入的命令为"get 文件"
                 cmd_split = cmd.split(" ")
                 filename = cmd_split[1]
-                self.receive(self.tunnel_sock_active, filename)
+                self.receive(self.tunnel_sock_active, filename, self.s)
             else:  #其他的命令处理
                 receive_content_size = self.s.recv(1024)   #使用控制信道进行传输大小的确定
                 received_size = 0
@@ -94,10 +95,12 @@ class Control():
                 while received_size > receive_content_size:
                     receive_content = self.tunnel_sock_active.recv(1024)  #使用数据通道进行ls等操作的数据传输
                     show_data += receive_content
+                self.tunnel_sock_active.close()
                 print(show_data)
 
 
-    def send(self, datasocket, file, filesizes):
+    def send(self, datasocket, file, filesizes, communicate_socket):
+        communicate_socket.send(bytes(str(filesizes), encoding="utf-8")) #使用通信信道通信上传文件的大小
         with open(file, "rb") as f:
             send_size = 0
             while filesizes > send_size:
@@ -105,10 +108,11 @@ class Control():
                 send_size += 1024
                 datasocket.send(data)
         datasocket.close()
+        communicate_socket.send(b"File upload complete")
         print("Put has been complete,Data Tunnel has been shut down")
 
     def receive(self, datasocket, filename):
-        filesize = self.s.recv(1024)
+        filesize = self.s.recv(1024)  #使用通信通道通信下载文件大小
         getsize = 0
         with open(self.pwd + "/" + filename, "ab") as f:
             while filesize > getsize:
