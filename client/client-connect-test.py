@@ -42,7 +42,7 @@ class Control():
         else:
             return tranport  #tranport为主动模式下被服务器连接的端口
 
-    def actiondecide(self, mode):
+    def actiondecide(self, mode, cmd):
         if re.match("put", cmd):  # 此处输入的命令为"put 绝对路径/文件"
             cmd_split = cmd.split(" ")
             filename = cmd_split[1]
@@ -88,7 +88,7 @@ class Control():
             msg = tunnel_sock.recv(1024)
             print(msg)
             self.tunnel_sock = tunnel_sock
-            self.actiondecide(self.mode)
+            #self.actiondecide(self.mode)
 
 
         else:  #主动模式,数据通道传输模式
@@ -121,7 +121,7 @@ class Control():
                 self.tunnel_sock_active.close()
                 print(show_data)
             """
-            self.actiondecide(self.mode)
+            #self.actiondecide(self.mode)
 
     def send(self, datasocket, file, filesizes, communicate_socket):
         communicate_socket.send(bytes(str(filesizes), encoding="utf-8")) #使用通信信道通信上传文件的大小

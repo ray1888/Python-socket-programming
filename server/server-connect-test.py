@@ -20,7 +20,9 @@ class Control():
         self.conn = c   ##self.conn 为控制信道与Client端通信的socket
         c.send(b"Welcome to the FTP server")
         mode = c.recv(1024)
+        mode = mode.decode("utf-8")
         print("mode is {}".format(mode))   #从client接收到的Mode参数
+        print(type(mode))
         self.mode = mode
         rmport = addr[1]
         rmaddr = addr[0]
@@ -55,8 +57,10 @@ class Control():
     def CmdRec(self, mode, chost, laddr=None):
         print(self.conn.getsockname())
         cmd = self.conn.recv(1024)
+        cmd = cmd.decode("utf-8")
         print(cmd)
-        if mode == b"PASV":  #被动模式
+        print(type(cmd))
+        if mode == "PASV":  #被动模式
             tport = self.CreatPort()  # tport是传输信道的端口
             print("peer={}".format(self.conn.getpeername()))
             self.conn.send(bytes(str(tport), encoding="utf-8"))
@@ -67,8 +71,8 @@ class Control():
             tunnel_sock.send(b"PASV mode tunnel has been started")
             self.tunnel_sock = tunnel_sock     #此处tunnel_sock 为被动模式下的数据信道
             #msg_tun = tsactive1.recv(1024)
-            Active_A = Action()
-            self.actiondecide(Active_A, cmd)
+            #Active_A = Action()
+            #self.actiondecide(Active_A, cmd)
 
         else: #主动模式
             lport = 20
@@ -81,8 +85,8 @@ class Control():
             tunnel_sock.connect((chost, serverport))
             tunnel_sock.send(b"active mode tunnel has been started")
             self.tunnel_sock = tunnel_sock    #此处tunnel_sock 为主动模式下的数据通道
-            Active_A = Action()
-            self.actiondecide(Active_A, cmd)
+            #Active_A = Action()
+            #self.actiondecide(Active_A, cmd)
 
 
 class Action():
@@ -99,7 +103,7 @@ class Action():
         communicate_socket.send(b'File upload finish')
 
     def get(self, workdir, filename, communicate_socket, data_socket):
-        sent_data_size =0
+        sent_data_size = 0
         filesize = os.path.getsize(workdir+filename)
         communicate_socket.send(bytes(filesize, encoding="utf-8"))
         with open(workdir+filename, 'rb') as f:
