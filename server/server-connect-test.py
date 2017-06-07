@@ -7,7 +7,7 @@ import random
 class Control():
     def __init__(self):
         self.s = socket.socket()
-        self.pwd = os.getcwd()
+        self.workdir = "E:\FTP"
         self.Connect()
         self.CmdRec(self.mode, self.rmaddr, self.host)
 
@@ -37,6 +37,21 @@ class Control():
         tranport = random.randint(30000, 65535)
         return tranport  #tp为主动模式下被服务器连接的端口
 
+    def actiondecide(self, Action, cmd):
+        if re.match("put", cmd):
+            cmd_split = cmd.split(" ")
+            filename = cmd_split[1]
+            Action.put(self.workdir, filename, self.conn, self.tunnel_sock)
+
+        elif re.match("get", cmd):
+            cmd_split = cmd.split(" ")
+            filename = cmd_split[1]
+            Action.get(self.workdir, filename, self.conn, self.tunnel_sock)
+
+        elif cmd == b"ls":
+            os.listdir()
+
+
     def CmdRec(self, mode, chost, laddr=None):
         print(self.conn.getsockname())
         cmd = self.conn.recv(1024)
@@ -52,6 +67,8 @@ class Control():
             tunnel_sock.send(b"PASV mode tunnel has been started")
             self.tunnel_sock = tunnel_sock     #此处tunnel_sock 为被动模式下的数据信道
             #msg_tun = tsactive1.recv(1024)
+            Active_A = Action()
+            self.actiondecide(Active_A, cmd)
 
         else: #主动模式
             lport = 20
@@ -64,6 +81,9 @@ class Control():
             tunnel_sock.connect((chost, serverport))
             tunnel_sock.send(b"active mode tunnel has been started")
             self.tunnel_sock = tunnel_sock    #此处tunnel_sock 为主动模式下的数据通道
+            Active_A = Action()
+            self.actiondecide(Active_A, cmd)
+
 
 class Action():
     def put(self, workdir, filename, communicate_socket, data_socket):
@@ -79,11 +99,10 @@ class Action():
         communicate_socket.send(b'File upload finish')
 
     def get(self, workdir, filename, communicate_socket, data_socket):
-        workdir = "/root"
         sent_data_size =0
         filesize = os.path.getsize(workdir+filename)
         communicate_socket.send(bytes(filesize, encoding="utf-8"))
-        with open(workdir + 'filename', 'rb') as f:
+        with open(workdir+filename, 'rb') as f:
             while filesize>sent_data_size:
                 data = f.read(1024)
                 sent_data_size += 1024
