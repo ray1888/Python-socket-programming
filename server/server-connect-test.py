@@ -59,11 +59,64 @@ class Control():
             print(serverport)
             serverport = int(serverport)
             print(type(serverport))
-            tunnal_sock = socket.socket()
-            tunnal_sock.bind((laddr, lport))
-            tunnal_sock.connect((chost, serverport))
-            tunnal_sock.send(b"active mode tunnel has been started")
-            self.tssock = tunnal_sock
+            tunnel_sock = socket.socket()
+            tunnel_sock.bind((laddr, lport))
+            tunnel_sock.connect((chost, serverport))
+            tunnel_sock.send(b"active mode tunnel has been started")
+            self.tssock = tunnel_sock
+
+class Action():
+    def upload(self, workdir, filename, c):
+        with open(workdir + 'filename', 'ab') as f:
+            while True:
+                try:
+                    data = c.recv(1024)
+                except Exception:
+                    print('end')
+                    print(b'File upload finish')
+                    c.send(b'File upload finish')
+                    break
+                '''
+                暂时采用错误机制进行文件传输判断，之后可能改为在最后一个包时加上一段特定符号进行判断
+                '''
+                f.write(data)
+
+    def download(self, workdir, filename, c):
+        with open(workdir + 'filename', 'rb') as f:
+            while True:
+                data = f.read(1024)
+                if data != "":
+                    c.send(data)
+                else:
+                    print("File Transfer Finish")
+                    c.send(b'File Transfer Finish')
+                    break
+
+    def lsdir(self, c, workdir):
+        dir_list = os.listdir(workdir)
+        con_len = sys.getsizeof(dir_list)
+        if (con_len % 1024) != 0 and (con_len / 1024) != 0:  # 进行判断，防止list的目录大于1024字节，保证能够传完
+            times = con_len / 1024
+            with open(workdir + '/tmp.txt', "wb") as f:
+                f.write(dir_list)
+            with open(workdir + '/tmp.txt', "rb") as f:
+                for i in range(times + 1):
+                    dir_list_div = f.read(1024)
+                    c.send(dir_list_div)
+        else:
+            c.send(dir_list)
+
+    def mkdir(self, c, new_name):
+        try:
+            os.mkdir(self.workdir + new_name)
+            c.send(b'Directory is created')
+        except Exception:
+            c.send(b'The Directory is already exist')
+
+    def cwdir(self, c):
+        path = os.getcwd()
+        c.send(bytes(path))
+
 
 
 if __name__ == "__main__":

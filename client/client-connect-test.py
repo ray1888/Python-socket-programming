@@ -6,7 +6,7 @@ import random
 
 class Control():
     def __init__(self):
-        self.s = socket.socket()
+        self.s = socket.socket()    #控制信道
         self.pwd = os.getcwd()
         self.Modeselection()
         self.Connect(self.mode)
@@ -41,31 +41,84 @@ class Control():
         if tranport == localport:
             self.CreatePort(localport)
         else:
-            return tranport  #tp为主动模式下被服务器连接的端口
+            return tranport  #tranport为主动模式下被服务器连接的端口
 
     def InputCmd(self, mode, shost, lport=None, laddr=None):
         cmd = input("请输入命令")
         self.s.send(bytes(cmd, encoding="utf-8"))
         print("cmd sent")
-        if mode == "PASV":  #被动模式
+        if mode == "PASV":  #被动模式,数据通道传输模式
             serverport = self.s.recv(1024)
             serverport = int(serverport)
             print(serverport)
-            ts = socket.socket()
-            ts.connect((shost, serverport))
-            msg = ts.recv(1024)
+            tunnel_sock = socket.socket()
+            tunnel_sock.connect((shost, serverport))   #被动模式的数据信道socket,name=tunnel_sock
+            msg = tunnel_sock.recv(1024)
             print(msg)
-            self.tssock = ts
-        else:  #主动模式
+            self.tunnel_sock = tunnel_sock
+            if re.match("put", cmd):   #此处输入的命令为"upload 绝对路径/文件"
+                cmd_split = cmd.split(" ")
+                filename = cmd_split[1]
+                filesize = os.path.getsize(filename)
+                self.send(self.tunnel_sock, filename, filesize)
+            elif re.match("get", cmd): #此处输入的命令为"download 文件"
+                cmd_split = cmd.split(" ")
+                filename = cmd_split[1]
+                self.receive(self.tunnel_sock, filename)
+            else:               #其他的命令处理
+                receive_content = self.tunnel_sock.recv(1024)
+                print(receive_content)
+
+        else:  #主动模式,数据通道传输模式
             tport = self.CreatePort(lport)   #tport是传输信道的端口
             self.s.send(bytes(str(tport), encoding="utf-8"))
             tsactive0 = socket.socket()  #tsactive0为等待对方进入的socket
             tsactive0.bind((laddr, tport))
             tsactive0.listen(5)
-            tsactive1, addrr =tsactive0.accept()
-            self.tssock = tsactive1
-            msg_tun = tsactive1.recv(1024)
+            tunnel_sock_active, addrr =tsactive0.accept()    #主动模式下的数据信道socket,tunnel_sock_active
+            self.tunnel_sock_active = tunnel_sock_active
+            msg_tun = self.tunnel_sock_active.recv(1024)
             print(msg_tun)
+            if re.match("put", cmd):   #此处输入的命令为"upload 绝对路径/文件"
+                cmd_split = cmd.split(" ")
+                filename = cmd_split[1]
+                filesize = os.path.getsize(filename)
+                self.send(self.tunnel_sock, filename, filesize)
+            elif re.match("get", cmd):  #此处输入的命令为"download 文件"
+                cmd_split = cmd.split(" ")
+                filename = cmd_split[1]
+                self.receive(self.tunnel_sock_active, filename)
+            else:  #其他的命令处理
+                receive_content_size = self.s.recv(1024)   #使用控制信道进行传输大小的确定
+                received_size = 0
+                show_data = ""
+                while received_size > receive_content_size:
+                    receive_content = self.tunnel_sock_active.recv(1024)  #使用数据通道进行ls等操作的数据传输
+                    show_data += receive_content
+                print(show_data)
+
+
+    def send(self, datasocket, file, filesizes):
+        with open(file, "rb") as f:
+            send_size = 0
+            while filesizes > send_size:
+                data = f.read(1024)
+                send_size += 1024
+                datasocket.send(data)
+        datasocket.close()
+        print("Put has been complete,Data Tunnel has been shut down")
+
+    def receive(self, datasocket, filename):
+        filesize = self.s.recv(1024)
+        getsize = 0
+        with open(self.pwd + "/" + filename, "ab") as f:
+            while filesize > getsize:
+                data = datasocket.recv(1024)
+                f.write(data)
+                data += 1024
+        datasocket.close()
+        print("Receive has been complete,Data Tunnel has been shut down")
+
 
 if __name__ == "__main__":
     c = Control()
