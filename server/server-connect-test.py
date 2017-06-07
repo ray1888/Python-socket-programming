@@ -17,7 +17,7 @@ class Control():
         self.s.bind((host, port))
         self.s.listen(5)
         c ,addr = self.s.accept()
-        self.conn = c
+        self.conn = c   ##self.conn 为控制信道与Client端通信的socket
         c.send(b"Welcome to the FTP server")
         mode = c.recv(1024)
         print("mode is {}".format(mode))   #从client接收到的Mode参数
@@ -48,9 +48,9 @@ class Control():
             tsactive0 = socket.socket()  # tsactive0为等待对方进入的socket
             tsactive0.bind((laddr, tport))
             tsactive0.listen(5)
-            tsactive1, addrr = tsactive0.accept()
-            tsactive1.send(b"PASV mode tunnel has been started")
-            self.tssock = tsactive1
+            tunnel_sock, addrr = tsactive0.accept()  #此处tunnel_sock 为被动模式下的数据信道
+            tunnel_sock.send(b"PASV mode tunnel has been started")
+            self.tunnel_sock = tunnel_sock     #此处tunnel_sock 为被动模式下的数据信道
             #msg_tun = tsactive1.recv(1024)
 
         else: #主动模式
@@ -63,34 +63,35 @@ class Control():
             tunnel_sock.bind((laddr, lport))
             tunnel_sock.connect((chost, serverport))
             tunnel_sock.send(b"active mode tunnel has been started")
-            self.tssock = tunnel_sock
+            self.tunnel_sock = tunnel_sock    #此处tunnel_sock 为主动模式下的数据通道
 
 class Action():
-    def upload(self, workdir, filename, c):
-        with open(workdir + 'filename', 'ab') as f:
-            while True:
-                try:
-                    data = c.recv(1024)
-                except Exception:
-                    print('end')
-                    print(b'File upload finish')
-                    c.send(b'File upload finish')
-                    break
-                '''
-                暂时采用错误机制进行文件传输判断，之后可能改为在最后一个包时加上一段特定符号进行判断
-                '''
+    def put(self, workdir, filename, communicate_socket, data_socket):
+        filesize = communicate_socket.recv(1024)
+        received_size = 0
+        with open(workdir + filename, 'ab') as f:
+            while filesize < received_size:
+                data = data_socket.recv(1024)
+                received_size += 1024
                 f.write(data)
+        data_socket.close()               #关闭数据通道
+        print(b'File upload finish')
+        communicate_socket.send(b'File upload finish')
 
-    def download(self, workdir, filename, c):
+    def get(self, workdir, filename, communicate_socket, data_socket):
+        workdir = "/root"
+        sent_data_size =0
+        filesize = os.path.getsize(workdir+filename)
+        communicate_socket.send(bytes(filesize, encoding="utf-8"))
         with open(workdir + 'filename', 'rb') as f:
-            while True:
+            while filesize>sent_data_size:
                 data = f.read(1024)
-                if data != "":
-                    c.send(data)
-                else:
-                    print("File Transfer Finish")
-                    c.send(b'File Transfer Finish')
-                    break
+                sent_data_size += 1024
+                data_socket.send(data)
+        data_socket.close()
+        print("File Transfer Finish")
+        communicate_socket.send(b'File Transfer Finish')
+
 
     def lsdir(self, c, workdir):
         dir_list = os.listdir(workdir)

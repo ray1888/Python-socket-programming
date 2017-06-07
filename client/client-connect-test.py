@@ -35,7 +35,6 @@ class Control():
         print(self.lport)
         print(self.addr)
 
-
     def CreatePort(self, localport):
         tranport = random.randint(4096,65535)
         if tranport == localport:
