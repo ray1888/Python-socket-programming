@@ -79,53 +79,61 @@ class Control():
 
 
     def InputCmd(self, mode, shost, lport=None, laddr=None):
-        cmd = input("请输入命令")
-        self.s.send(bytes(cmd, encoding="utf-8"))
-        print("cmd sent")
+        Flag = True
+        while Flag:
+            cmd = input("请输入命令")
+            self.s.send(bytes(cmd, encoding="utf-8"))
+            print(cmd)
+            print("cmd sent")
+            print(hasattr(Control, "s"))
+            if cmd == "quit":   #进行quit命令判断
+                self.s.close()
+                print("Control tunnel has been shut down, the FTP Client quit")
+                break
 
-        if mode == "PASV":  #被动模式,数据通道传输模式
-            serverport = self.s.recv(1024)
-            serverport = int(serverport)
-            print(serverport)
-            tunnel_sock = socket.socket()
-            tunnel_sock.connect((shost, serverport))   #被动模式的数据信道socket,name=tunnel_sock
-            msg = tunnel_sock.recv(1024)
-            print(msg)
-            self.tunnel_sock = tunnel_sock
-            self.actiondecide(self.mode, cmd)
+            if mode == "PASV":  #被动模式,数据通道传输模式
+                serverport = self.s.recv(1024)
+                serverport = int(serverport)
+                print(serverport)
+                tunnel_sock = socket.socket()
+                tunnel_sock.connect((shost, serverport))   #被动模式的数据信道socket,name=tunnel_sock
+                msg = tunnel_sock.recv(1024)
+                print(msg)
+                self.tunnel_sock = tunnel_sock
+                self.actiondecide(self.mode, cmd)
 
 
-        else:  #主动模式,数据通道传输模式
-            tport = self.CreatePort(lport)   #tport是传输信道的端口
-            self.s.send(bytes(str(tport), encoding="utf-8"))
-            tsactive0 = socket.socket()  #tsactive0为等待对方进入的socket
-            tsactive0.bind((laddr, tport))
-            tsactive0.listen(5)
-            tunnel_sock_active, addrr =tsactive0.accept()    #主动模式下的数据信道socket,tunnel_sock_active
-            self.tunnel_sock_active = tunnel_sock_active
-            msg_tun = self.tunnel_sock_active.recv(1024)
-            print(msg_tun)
-            """
-            if re.match("put", cmd):   #此处输入的命令为"put 绝对路径/文件"
-                cmd_split = cmd.split(" ")
-                filename = cmd_split[1]
-                filesize = os.path.getsize(filename)
-                self.send(self.tunnel_sock, filename, filesize, self.s)
-            elif re.match("get", cmd):  #此处输入的命令为"get 文件"
-                cmd_split = cmd.split(" ")
-                filename = cmd_split[1]
-                self.receive(self.tunnel_sock_active, filename, self.s)
-            else:  #其他的命令处理
-                receive_content_size = self.s.recv(1024)   #使用控制信道进行传输大小的确定
-                received_size = 0
-                show_data = ""
-                while received_size > receive_content_size:
-                    receive_content = self.tunnel_sock_active.recv(1024)  #使用数据通道进行ls等操作的数据传输
-                    show_data += receive_content
-                self.tunnel_sock_active.close()
-                print(show_data)
-            """
-            self.actiondecide(self.mode, cmd)
+            else:  #主动模式,数据通道传输模式
+                tport = self.CreatePort(lport)   #tport是传输信道的端口
+                self.s.send(bytes(str(tport), encoding="utf-8"))
+                tsactive0 = socket.socket()  #tsactive0为等待对方进入的socket
+                tsactive0.bind((laddr, tport))
+                tsactive0.listen(5)
+                tunnel_sock_active, addrr =tsactive0.accept()    #主动模式下的数据信道socket,tunnel_sock_active
+                self.tunnel_sock_active = tunnel_sock_active
+                msg_tun = self.tunnel_sock_active.recv(1024)
+                print(msg_tun)
+                """
+                if re.match("put", cmd):   #此处输入的命令为"put 绝对路径/文件"
+                    cmd_split = cmd.split(" ")
+                    filename = cmd_split[1]
+                    filesize = os.path.getsize(filename)
+                    self.send(self.tunnel_sock, filename, filesize, self.s)
+                elif re.match("get", cmd):  #此处输入的命令为"get 文件"
+                    cmd_split = cmd.split(" ")
+                    filename = cmd_split[1]
+                    self.receive(self.tunnel_sock_active, filename, self.s)
+                else:  #其他的命令处理
+                    receive_content_size = self.s.recv(1024)   #使用控制信道进行传输大小的确定
+                    received_size = 0
+                    show_data = ""
+                    while received_size > receive_content_size:
+                        receive_content = self.tunnel_sock_active.recv(1024)  #使用数据通道进行ls等操作的数据传输
+                        show_data += receive_content
+                    self.tunnel_sock_active.close()
+                    print(show_data)
+                """
+                self.actiondecide(self.mode, cmd)
 
     def send(self, datasocket, file, filesizes, communicate_socket):
         communicate_socket.send(bytes(str(filesizes), encoding="utf-8")) #使用通信信道通信上传文件的大小

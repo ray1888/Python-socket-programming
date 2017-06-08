@@ -22,7 +22,6 @@ class Control():
         mode = c.recv(1024)
         mode = mode.decode("utf-8")
         print("mode is {}".format(mode))   #从client接收到的Mode参数
-        print(type(mode))
         self.mode = mode
         rmport = addr[1]
         rmaddr = addr[0]
@@ -30,9 +29,6 @@ class Control():
         self.rmaddr = rmaddr
         host, lport = self.conn.getpeername()
         self.host = host
-        print(self.rmport)
-        print(self.rmaddr)
-        print(self.host)
 
 
     def CreatPort(self):
@@ -57,38 +53,46 @@ class Control():
 
 
     def CmdRec(self, mode, chost, laddr=None):
-        print(self.conn.getsockname())
-        cmd = self.conn.recv(1024)
-        cmd = cmd.decode("utf-8")
-        print(cmd)
-        print(type(cmd))
-        if mode == "PASV":  #被动模式
-            tport = self.CreatPort()  # tport是传输信道的端口
-            print("peer={}".format(self.conn.getpeername()))
-            self.conn.send(bytes(str(tport), encoding="utf-8"))
-            tsactive0 = socket.socket()  # tsactive0为等待对方进入的socket
-            tsactive0.bind((laddr, tport))
-            tsactive0.listen(5)
-            tunnel_sock, addrr = tsactive0.accept()  #此处tunnel_sock 为被动模式下的数据信道
-            tunnel_sock.send(b"PASV mode tunnel has been started")
-            self.tunnel_sock = tunnel_sock     #此处tunnel_sock 为被动模式下的数据信道
-            #msg_tun = tsactive1.recv(1024)
-            Active_A = Action()
-            self.actiondecide(Active_A, cmd)
+        Flag = True
+        while Flag:
+            print(self.conn.getsockname())
+            cmd = self.conn.recv(1024)
+            cmd = cmd.decode("utf-8")
+            print(cmd)
+            print(type(cmd))
 
-        else: #主动模式
-            lport = 20
-            serverport = self.conn.recv(1024)
-            print(serverport)
-            serverport = int(serverport)
-            print(type(serverport))
-            tunnel_sock = socket.socket()
-            tunnel_sock.bind((laddr, lport))
-            tunnel_sock.connect((chost, serverport))
-            tunnel_sock.send(b"active mode tunnel has been started")
-            self.tunnel_sock = tunnel_sock    #此处tunnel_sock 为主动模式下的数据通道
-            Active_A = Action()
-            self.actiondecide(Active_A, cmd)
+            if cmd == "quit":   #进行quit命令判断
+                self.conn.close()
+                print("Control tunnel has been shut down, the FTP Server quit")
+                break
+
+            if mode == "PASV":  #被动模式
+                tport = self.CreatPort()  # tport是传输信道的端口
+                print("peer={}".format(self.conn.getpeername()))
+                self.conn.send(bytes(str(tport), encoding="utf-8"))
+                tsactive0 = socket.socket()  # tsactive0为等待对方进入的socket
+                tsactive0.bind((laddr, tport))
+                tsactive0.listen(5)
+                tunnel_sock, addrr = tsactive0.accept()  #此处tunnel_sock 为被动模式下的数据信道
+                tunnel_sock.send(b"PASV mode tunnel has been started")
+                self.tunnel_sock = tunnel_sock     #此处tunnel_sock 为被动模式下的数据信道
+                #msg_tun = tsactive1.recv(1024)
+                Active_A = Action()
+                self.actiondecide(Active_A, cmd)
+
+            else: #主动模式
+                lport = 20
+                serverport = self.conn.recv(1024)
+                print(serverport)
+                serverport = int(serverport)
+                print(type(serverport))
+                tunnel_sock = socket.socket()
+                tunnel_sock.bind((laddr, lport))
+                tunnel_sock.connect((chost, serverport))
+                tunnel_sock.send(b"active mode tunnel has been started")
+                self.tunnel_sock = tunnel_sock    #此处tunnel_sock 为主动模式下的数据通道
+                Active_A = Action()
+                self.actiondecide(Active_A, cmd)
 
 
 class Action():
