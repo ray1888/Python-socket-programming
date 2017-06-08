@@ -43,6 +43,8 @@ class Control():
         if re.match("put", cmd):
             cmd_split = cmd.split(" ")
             filename = cmd_split[1]
+            print(filename)
+            print(type(filename))
             Action.put(self.workdir, filename, self.conn, self.tunnel_sock)
 
         elif re.match("get", cmd):
@@ -71,8 +73,8 @@ class Control():
             tunnel_sock.send(b"PASV mode tunnel has been started")
             self.tunnel_sock = tunnel_sock     #此处tunnel_sock 为被动模式下的数据信道
             #msg_tun = tsactive1.recv(1024)
-            #Active_A = Action()
-            #self.actiondecide(Active_A, cmd)
+            Active_A = Action()
+            self.actiondecide(Active_A, cmd)
 
         else: #主动模式
             lport = 20
@@ -85,19 +87,24 @@ class Control():
             tunnel_sock.connect((chost, serverport))
             tunnel_sock.send(b"active mode tunnel has been started")
             self.tunnel_sock = tunnel_sock    #此处tunnel_sock 为主动模式下的数据通道
-            #Active_A = Action()
-            #self.actiondecide(Active_A, cmd)
+            Active_A = Action()
+            self.actiondecide(Active_A, cmd)
 
 
 class Action():
     def put(self, workdir, filename, communicate_socket, data_socket):
         filesize = communicate_socket.recv(1024)
+        filesize = int(filesize)
+        filename = filename.split("\\")[1]
+        print(filename)
+        print(filesize)
         received_size = 0
-        with open(workdir + filename, 'ab') as f:
-            while filesize < received_size:
+        with open(workdir+"\\"+filename, 'wb') as f:
+            while filesize > received_size:
+                print(received_size)
                 data = data_socket.recv(1024)
-                received_size += 1024
                 f.write(data)
+                received_size += 1024
         data_socket.close()               #关闭数据通道
         print(b'File upload finish')
         communicate_socket.send(b'File upload finish')

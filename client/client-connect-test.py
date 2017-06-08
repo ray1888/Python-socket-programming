@@ -15,7 +15,7 @@ class Control():
     def Modeselection(self):
         mode = input("请输入模式，主动输入ACT，被动输入PASV")
         if mode != "ACT" and mode != "PASV":
-            Modeselection()
+            self.Modeselection()
         else:
             self.mode = mode
 
@@ -47,6 +47,10 @@ class Control():
             cmd_split = cmd.split(" ")
             filename = cmd_split[1]
             filesize = os.path.getsize(filename)
+            print(filename)
+            print(type(filename))
+            print(filesize)
+            print(type(filesize))
             if mode == b"PASV":
                 self.send(self.tunnel_sock, filename, filesize)
             else:
@@ -88,7 +92,7 @@ class Control():
             msg = tunnel_sock.recv(1024)
             print(msg)
             self.tunnel_sock = tunnel_sock
-            #self.actiondecide(self.mode)
+            self.actiondecide(self.mode, cmd)
 
 
         else:  #主动模式,数据通道传输模式
@@ -121,13 +125,14 @@ class Control():
                 self.tunnel_sock_active.close()
                 print(show_data)
             """
-            #self.actiondecide(self.mode)
+            self.actiondecide(self.mode, cmd)
 
     def send(self, datasocket, file, filesizes, communicate_socket):
         communicate_socket.send(bytes(str(filesizes), encoding="utf-8")) #使用通信信道通信上传文件的大小
         with open(file, "rb") as f:
             send_size = 0
             while filesizes > send_size:
+                print(send_size)
                 data = f.read(1024)
                 send_size += 1024
                 datasocket.send(data)
