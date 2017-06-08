@@ -57,7 +57,7 @@ class Control():
         elif cmd == "ls":
             Action.lsdir(self.conn, self.workdir)
         elif re.match("cd", cmd):
-            Action.cd(self.conn, cmd)
+            self.workdir = Action.cd(self.conn, cmd, self.topdir)
         elif re.match("mkdir", cmd):
             Action.mkdir(self.conn, cmd)
         elif cmd == "pwd":
@@ -183,13 +183,14 @@ class Action():
         communicate_socket.send(bytes(str(filesize), encoding="utf-8"))
         communicate_socket.send(bytes(path, encoding="utf-8"))
 
-    def cd(self, communicate_socket, cmd):
+    def cd(self, communicate_socket, cmd, topdir):
         """
         在思考如何控制用户使用时不会超过这个目录，为了安全考虑
         """
         cmd_split = cmd.split(" ")
         path = cmd_split[1]
-        self.workdir = path
+        
+        return path
 
 
 
