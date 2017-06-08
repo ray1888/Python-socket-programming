@@ -6,8 +6,12 @@ import random
 
 class Control():
     def __init__(self):
+        timeout = 200
         self.s = socket.socket()
+        self.s.settimeout(timeout)
+        self.topdir = "E:\FTP"
         self.workdir = "E:\FTP"
+        self.tmpdir = "E:\FTP\TMP"   #tmpdir、workdir、topdir最后会使用配置文件进行控制
         self.Connect()
         self.CmdRec(self.mode, self.rmaddr, self.host)
 
@@ -35,21 +39,24 @@ class Control():
         tranport = random.randint(30000, 65535)
         return tranport  #tp为主动模式下被服务器连接的端口
 
-    def actiondecide(self, Action, cmd):
+    def actiondecide(self, Action, cmd, mode):   #命令选择
         if re.match("put", cmd):
             cmd_split = cmd.split(" ")
             filename = cmd_split[1]
             print(filename)
             print(type(filename))
-            Action.put(self.workdir, filename, self.conn, self.tunnel_sock)
-
+            if mode == "PASV":
+                Action.put(self.workdir, filename, self.conn, self.tunnel_sock)
+            else:
+                Action.put(self.workdir, filename, self.conn, self.tunnel_sock)
         elif re.match("get", cmd):
             cmd_split = cmd.split(" ")
             filename = cmd_split[1]
             Action.get(self.workdir, filename, self.conn, self.tunnel_sock)
 
-        elif cmd == b"ls":
-            os.listdir()
+        elif cmd == "ls":
+            Action.lsdir(self.conn, self.workdir)
+
 
 
     def CmdRec(self, mode, chost, laddr=None):
@@ -78,7 +85,7 @@ class Control():
                 self.tunnel_sock = tunnel_sock     #此处tunnel_sock 为被动模式下的数据信道
                 #msg_tun = tsactive1.recv(1024)
                 Active_A = Action()
-                self.actiondecide(Active_A, cmd)
+                self.actiondecide(Active_A, cmd, self.mode)
 
             else: #主动模式
                 lport = 20
@@ -92,33 +99,40 @@ class Control():
                 tunnel_sock.send(b"active mode tunnel has been started")
                 self.tunnel_sock = tunnel_sock    #此处tunnel_sock 为主动模式下的数据通道
                 Active_A = Action()
-                self.actiondecide(Active_A, cmd)
+                self.actiondecide(Active_A, cmd, self.mode)
 
 
 class Action():
     def put(self, workdir, filename, communicate_socket, data_socket):
-        filesize = communicate_socket.recv(1024)
-        filesize = int(filesize)
         filename = filename.split("\\")[1]
         print(filename)
-        print(filesize)
-        received_size = 0
-        with open(workdir+"\\"+filename, 'wb') as f:
-            while filesize > received_size:
-                print(received_size)
-                data = data_socket.recv(1024)
-                f.write(data)
-                received_size += 1024
-        data_socket.close()               #关闭数据通道
-        print(b'File upload finish')
-        communicate_socket.send(b'File upload finish')
+        if os.path.exists(workdir+"\\"+filename):
+            communicate_socket.send(b"0")
+        else:
+            communicate_socket.send(b"trying to receive File")
+            print("filename = {}".format(filename))
+            print(type(filename))
+            filesize = communicate_socket.recv(1024)
+            filesize = int(filesize)
+            print("filename1 = {}".format(filename))
+            print(filesize)
+            received_size = 0
+            with open(workdir+"\\"+filename, 'wb') as f:
+                while filesize > received_size:
+                    print(received_size)
+                    data = data_socket.recv(1024)
+                    f.write(data)
+                    received_size += 1024
+            data_socket.close()               #关闭数据通道
+            print(b'File upload finish,Data tunnel shutdown')
+            communicate_socket.send(b'File upload finish')
 
     def get(self, workdir, filename, communicate_socket, data_socket):
         sent_data_size = 0
         filesize = os.path.getsize(workdir+filename)
         communicate_socket.send(bytes(filesize, encoding="utf-8"))
         with open(workdir+filename, 'rb') as f:
-            while filesize>sent_data_size:
+            while filesize > sent_data_size:
                 data = f.read(1024)
                 sent_data_size += 1024
                 data_socket.send(data)
@@ -127,26 +141,33 @@ class Action():
         communicate_socket.send(b'File Transfer Finish')
 
 
-    def lsdir(self, c, workdir):
+    def lsdir(self, communicate_socket, workdir):
         dir_list = os.listdir(workdir)
-        con_len = sys.getsizeof(dir_list)
-        if (con_len % 1024) != 0 and (con_len / 1024) != 0:  # 进行判断，防止list的目录大于1024字节，保证能够传完
-            times = con_len / 1024
-            with open(workdir + '/tmp.txt', "wb") as f:
-                f.write(dir_list)
-            with open(workdir + '/tmp.txt', "rb") as f:
+        dirlist = ""
+        for i in dir_list:
+            print(i)
+            dirlist += i+"\n"
+        con_len = sys.getsizeof(dirlist)
+        print("dirlist = {}".format(dirlist))
+        communicate_socket.send(bytes(str(con_len), encoding="utf-8"))
+        if (con_len % 1024) != 0 and (con_len / 1024) != 0:  # 进行大小判断，保证能够传完
+            times = int(con_len/1024)
+            print(times)
+            with open(workdir+"\\"+'tmp.txt', "w") as f:
+                f.write(dirlist)
+            with open(workdir+"\\"+'tmp.txt', "rb") as f:
                 for i in range(times + 1):
                     dir_list_div = f.read(1024)
-                    c.send(dir_list_div)
+                    communicate_socket.send(dir_list_div)
         else:
-            c.send(dir_list)
+            communicate_socket.send(dir_list)
 
-    def mkdir(self, c, new_name):
+    def mkdir(self, communicate_socket, new_name):
         try:
             os.mkdir(self.workdir + new_name)
-            c.send(b'Directory is created')
+            communicate_socket.send(b'Directory is created')
         except Exception:
-            c.send(b'The Directory is already exist')
+            communicate_socket.send(b'The Directory is already exist')
 
     def cwdir(self, c):
         path = os.getcwd()

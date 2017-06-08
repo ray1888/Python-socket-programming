@@ -51,41 +51,41 @@ class Control():
             print(type(filename))
             print(filesize)
             print(type(filesize))
-            if mode == b"PASV":
-                self.send(self.tunnel_sock, filename, filesize)
-            else:
+            if mode == "PASV":
                 self.send(self.tunnel_sock, filename, filesize, self.s)
+            else:
+                self.send(self.tunnel_sock_active, filename, filesize, self.s)
         elif re.match("get", cmd):  # 此处输入的命令为"get 文件"
             cmd_split = cmd.split(" ")
             filename = cmd_split[1]
-            if mode == b"PASV":
+            if mode == "PASV":
                 self.receive(self.tunnel_sock, filename)
             else:
                 self.receive(self.tunnel_sock_active, filename, self.s)
-        else:  # 其他的命令处理
-            if mode == b"PASV":
-                receive_content = self.tunnel_sock.recv(1024)
-                print(receive_content)
-            else:
-                receive_content_size = self.s.recv(1024)  # 使用控制信道进行传输大小的确定
-                received_size = 0
-                show_data = ""
-                while received_size > receive_content_size:
-                    receive_content = self.tunnel_sock_active.recv(1024)  # 使用数据通道进行ls等操作的数据传输
-                    show_data += receive_content
-                self.tunnel_sock_active.close()
-                print(show_data)
+        else:  # 其他的命令处理,处理上传下载操作外，其余数据传输操作混合在控制信道中进行传输
+            receive_content_size = self.s.recv(1024)  # 使用控制信道进行传输大小的确定
+            receive_content_size = int(receive_content_size.decode("utf-8"))
+            print("receive_content_size = {}".format(receive_content_size))
+            print(type(receive_content_size))
+            received_size = 0
+            show_data = ""
+            while received_size < receive_content_size:
+                receive_content = self.s.recv(1024)  # 使用数据通道进行ls等操作的数据传输
+                receive_content = receive_content.decode("utf-8")
+                received_size += 1024
+                show_data += receive_content
+
+            print("lsdir : \n {}".format(show_data))
 
 
 
-    def InputCmd(self, mode, shost, lport=None, laddr=None):
+    def InputCmd(self,mode,shost,lport=None,laddr=None):
         Flag = True
         while Flag:
             cmd = input("请输入命令")
             self.s.send(bytes(cmd, encoding="utf-8"))
             print(cmd)
             print("cmd sent")
-            print(hasattr(Control, "s"))
             if cmd == "quit":   #进行quit命令判断
                 self.s.close()
                 print("Control tunnel has been shut down, the FTP Client quit")
@@ -93,6 +93,7 @@ class Control():
 
             if mode == "PASV":  #被动模式,数据通道传输模式
                 serverport = self.s.recv(1024)
+                print(serverport)
                 serverport = int(serverport)
                 print(serverport)
                 tunnel_sock = socket.socket()
@@ -101,7 +102,6 @@ class Control():
                 print(msg)
                 self.tunnel_sock = tunnel_sock
                 self.actiondecide(self.mode, cmd)
-
 
             else:  #主动模式,数据通道传输模式
                 tport = self.CreatePort(lport)   #tport是传输信道的端口
@@ -136,17 +136,23 @@ class Control():
                 self.actiondecide(self.mode, cmd)
 
     def send(self, datasocket, file, filesizes, communicate_socket):
-        communicate_socket.send(bytes(str(filesizes), encoding="utf-8")) #使用通信信道通信上传文件的大小
-        with open(file, "rb") as f:
-            send_size = 0
-            while filesizes > send_size:
-                print(send_size)
-                data = f.read(1024)
-                send_size += 1024
-                datasocket.send(data)
-        datasocket.close()
-        communicate_socket.send(b"File upload complete")
-        print("Put has been complete,Data Tunnel has been shut down")
+        exist = communicate_socket.recv(1024)
+        print(exist)
+        print(type(exist))
+        if exist == b'0':
+            print("the file already exist in FTP Server")
+        else:
+            communicate_socket.send(bytes(str(filesizes), encoding="utf-8")) #使用通信信道通信上传文件的大小
+            with open(file, "rb") as f:
+                send_size = 0
+                while filesizes > send_size:
+                    print(send_size)
+                    data = f.read(1024)
+                    send_size += 1024
+                    datasocket.send(data)
+            datasocket.close()
+            communicate_socket.send(b"File upload complete")
+            print("Put has been complete,Data Tunnel has been shut down")
 
     def receive(self, datasocket, filename):
         filesize = self.s.recv(1024)  #使用通信通道通信下载文件大小
