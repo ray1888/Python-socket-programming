@@ -60,8 +60,10 @@ class Control():
             filename = cmd_split[1]
             if mode == "PASV":
                 self.receive(self.tunnel_sock, filename)
+                self.s.recv(1024)
             else:
                 self.receive(self.tunnel_sock_active, filename, self.s)
+                self.s.recv(1024)
         else:  # 其他的命令处理,处理上传下载操作外，其余数据传输操作混合在控制信道中进行传输
             receive_content_size = self.s.recv(1024)  # 使用控制信道进行传输大小的确定
             receive_content_size = int(receive_content_size.decode("utf-8"))
@@ -99,7 +101,7 @@ class Control():
 
             if mode == "PASV":  #被动模式,数据通道传输模式
                 serverport = self.s.recv(1024)
-                print(serverport)
+                print("serverport = {}".format(serverport))
                 serverport = int(serverport)
                 print(serverport)
                 tunnel_sock = socket.socket()
@@ -137,13 +139,13 @@ class Control():
                     send_size += 1024
                     datasocket.send(data)
             datasocket.close()
-            communicate_socket.send(b"File upload complete")
+            communicate_socket.recv(1024)
             print("Put has been complete,Data Tunnel has been shut down")
 
     def receive(self, datasocket, filename):
         filesize = self.s.recv(1024) #使用通信通道通信下载文件大小
-        filesize = int(filesize)
         print(filesize)
+        filesize = int(filesize)
         print(type(filesize))
         getsize = 0
         print(self.pwd)

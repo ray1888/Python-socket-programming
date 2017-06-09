@@ -9,9 +9,9 @@ class Control():
         timeout = 200
         self.s = socket.socket()
         self.s.settimeout(timeout)
-        self.topdir = "E:\FTP"
-        self.workdir = "E:\FTP\\"
-        self.tmpdir = "E:\FTP\TMP"   #tmpdir、workdir、topdir最后会使用配置文件进行控制
+        self.topdir = "E:/FTP/"        #下一版本会修改为使用配置文件进行设定
+        self.workdir = self.topdir
+        self.tmpdir = self.topdir+"/TMP"   #tmpdir、workdir、topdir最后会使用配置文件进行控制
         self.Connect()
         self.CmdRec(self.mode, self.rmaddr, self.host)
 
@@ -61,7 +61,8 @@ class Control():
         elif re.match("mkdir", cmd):
             Action.mkdir(self.conn, cmd)
         elif cmd == "pwd":
-            Action.pwd(self.conn, self.workdir)
+            self.workdir = Action.pwd(self.conn, self.workdir)
+            self.conn.send(b"currurt dir is {}".format(self.workdir))  #cd命令跳转成功状态码
 
     def CmdRec(self, mode, chost, laddr=None):
         Flag = True
@@ -69,7 +70,7 @@ class Control():
             print(self.conn.getsockname())
             cmd = self.conn.recv(1024)
             cmd = cmd.decode("utf-8")
-            print(cmd)
+            print("cmd = {}".format(cmd))
             print(type(cmd))
 
             if cmd == "quit":   #进行quit命令判断
@@ -80,6 +81,7 @@ class Control():
             if mode == "PASV":  #被动模式
                 tport = self.CreatPort()  # tport是传输信道的端口
                 print("peer={}".format(self.conn.getpeername()))
+                print("tport = {}".format(tport))
                 self.conn.send(bytes(str(tport), encoding="utf-8"))
                 tsactive0 = socket.socket()  # tsactive0为等待对方进入的socket
                 tsactive0.bind((laddr, tport))
@@ -94,7 +96,7 @@ class Control():
             else: #主动模式
                 lport = 20
                 serverport = self.conn.recv(1024)
-                print(serverport)
+                print("serverport = {}".format(serverport))
                 serverport = int(serverport)
                 print(type(serverport))
                 tunnel_sock = socket.socket()
@@ -157,9 +159,9 @@ class Action():
         if (con_len % 1024) != 0 and (con_len / 1024) != 0:  # 进行大小判断，保证能够传完
             times = int(con_len/1024)
             print(times)
-            with open(workdir+"\\"+'tmp.txt', "w") as f:
+            with open(workdir+"/TMP/"+'tmp.txt', "w") as f:
                 f.write(dirlist)
-            with open(workdir+"\\"+'tmp.txt', "rb") as f:
+            with open(workdir+"/TMP/"+'tmp.txt', "rb") as f:
                 for i in range(times + 1):
                     dir_list_div = f.read(1024)
                     communicate_socket.send(dir_list_div)
@@ -183,14 +185,19 @@ class Action():
         communicate_socket.send(bytes(str(filesize), encoding="utf-8"))
         communicate_socket.send(bytes(path, encoding="utf-8"))
 
-    def cd(self, communicate_socket, cmd, topdir):
+    def cd(self, communicate_socket, cmd, topdir, workdir):
         """
         在思考如何控制用户使用时不会超过这个目录，为了安全考虑
         """
         cmd_split = cmd.split(" ")
         path = cmd_split[1]
-        
-        return path
+        if re.match(topdir, path):
+            if os.path.exists(workdir+"\\"+path):
+                return path
+            else:
+                communicate_socket.send(b"301") #当前工作目录中不存在此目录
+        else:
+            communicate_socket.send(b"302")  #超过顶级目录的状态码
 
 
 
