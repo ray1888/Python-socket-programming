@@ -1,7 +1,8 @@
 # Python-socket-programming
 This is a Python network Programming project as a FTP Server              
 
-本FTP服务器支持以下命令：
+本FTP服务器支持以下命令：                           
+                                        
 ls    listdir, 作用：列出当前目录的文件                                        
 cd +  跳转目录                                            
 put + 本机文件(本机使用绝对路径)       作用：上传文件到FTP服务器                           
