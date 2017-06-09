@@ -65,7 +65,7 @@ class Control():
             Action.mkdir(self.conn, cmd)
         elif cmd == "pwd":
             self.workdir = Action.pwd(self.conn, self.workdir)
-            self.conn.send(b"currurt dir is {}".format(self.workdir))  
+            self.conn.send(b"currurt dir is {}".format(self.workdir))
 
     def CmdRec(self, mode, chost, laddr=None):
         Flag = True
