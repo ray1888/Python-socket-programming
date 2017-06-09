@@ -10,3 +10,7 @@ a.txt
 ba.txt
 TMP
 tmp.txt
+a.txt
+ba.txt
+TMP
+tmp.txt

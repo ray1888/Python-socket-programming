@@ -53,7 +53,10 @@ class Control():
             cmd_split = cmd.split(" ")
             filename = cmd_split[1]
             print(filename)
-            Action.get(self.workdir, filename, self.conn, self.tunnel_sock)
+            if mode == "PASV":
+                Action.get(self.workdir, filename, self.conn, self.tunnel_sock)
+            else:
+                Action.get(self.workdir, filename, self.conn, self.tunnel_sock)
         elif cmd == "ls":
             Action.lsdir(self.conn, self.workdir)
         elif re.match("cd", cmd):
@@ -98,12 +101,14 @@ class Control():
                 serverport = self.conn.recv(1024)
                 print("serverport = {}".format(serverport))
                 serverport = int(serverport)
+                print("serverport = {}".format(serverport))
                 print(type(serverport))
-                tunnel_sock = socket.socket()
-                tunnel_sock.bind((laddr, lport))
-                tunnel_sock.connect((chost, serverport))
-                tunnel_sock.send(b"active mode tunnel has been started")
-                self.tunnel_sock = tunnel_sock    #此处tunnel_sock 为主动模式下的数据通道
+                print("lport = {}".format(lport))
+                print("laddr = {}".format(laddr))
+                self.tunnel_sock = socket.socket()    #此处tunnel_sock 为主动模式下的数据通道
+                self.tunnel_sock.bind((laddr, lport))
+                self.tunnel_sock.connect((chost, serverport))
+                self.tunnel_sock.send(b"active mode tunnel has been started")
                 Active_A = Action()
                 self.actiondecide(Active_A, cmd, self.mode)
 

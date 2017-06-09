@@ -117,7 +117,7 @@ class Control():
                 tsactive0 = socket.socket()  #tsactive0为等待对方进入的socket
                 tsactive0.bind((laddr, tport))
                 tsactive0.listen(5)
-                tunnel_sock_active, addrr =tsactive0.accept()    #主动模式下的数据信道socket,tunnel_sock_active
+                tunnel_sock_active, addrr = tsactive0.accept()    #主动模式下的数据信道socket,tunnel_sock_active
                 self.tunnel_sock_active = tunnel_sock_active
                 msg_tun = self.tunnel_sock_active.recv(1024)
                 print(msg_tun)
