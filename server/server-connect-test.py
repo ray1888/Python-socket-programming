@@ -43,12 +43,13 @@ class Control():
         if re.match("put", cmd):
             cmd_split = cmd.split(" ")
             filename = cmd_split[1]
-            print(filename)
+            print("action filename:{}".format(filename))
             print(type(filename))
             if mode == "PASV":
                 Action.put(self.workdir, filename, self.conn, self.tunnel_sock)
             else:
                 Action.put(self.workdir, filename, self.conn, self.tunnel_sock)
+
         elif re.match("get", cmd):
             cmd_split = cmd.split(" ")
             filename = cmd_split[1]
@@ -57,6 +58,8 @@ class Control():
                 Action.get(self.workdir, filename, self.conn, self.tunnel_sock)
             else:
                 Action.get(self.workdir, filename, self.conn, self.tunnel_sock)
+            self.tunnel_sock.close()      #关闭数据通道
+            print("tunnel_sock_close")
         elif cmd == "ls":
             Action.lsdir(self.conn, self.workdir)
         elif re.match("cd", cmd):
@@ -111,13 +114,20 @@ class Control():
                 self.tunnel_sock.send(b"active mode tunnel has been started")
                 Active_A = Action()
                 self.actiondecide(Active_A, cmd, self.mode)
+                self.tunnel_sock.close()  # 关闭数据通道
+                print("tunnel_sock_close")
+                print("lport {} is close".format(lport))
 
 
 class Action():
     def put(self, workdir, filename, communicate_socket, data_socket):
-        filename = filename.split("\\")[1]
-        print(filename)
-        if os.path.exists(workdir+"\\"+filename):
+        print("filename :".format(filename))
+        print(type(filename))
+        filename = os.path.basename(filename)
+        print("filename1:{}".format(filename))
+        #filename = filename.split("/")
+        #print("filename :".format(filename))
+        if os.path.exists(workdir+filename):
             communicate_socket.send(b"0")
         else:
             communicate_socket.send(b"trying to receive File")
@@ -128,13 +138,13 @@ class Action():
             print("filename1 = {}".format(filename))
             print(filesize)
             received_size = 0
-            with open(workdir+"\\"+filename, 'wb') as f:
+            with open(workdir+"/"+filename, 'wb') as f:
                 while filesize > received_size:
                     print(received_size)
                     data = data_socket.recv(1024)
                     f.write(data)
                     received_size += 1024
-            data_socket.close()               #关闭数据通道
+
             print(b'File upload finish,Data tunnel shutdown')
             communicate_socket.send(b'File upload finish')
 
@@ -147,7 +157,6 @@ class Action():
                 data = f.read(1024)
                 sent_data_size += 1024
                 data_socket.send(data)
-        data_socket.close()
         print("File Transfer Finish")
         communicate_socket.send(b'File Transfer Finish')
 
@@ -164,7 +173,7 @@ class Action():
         if (con_len % 1024) != 0 and (con_len / 1024) != 0:  # 进行大小判断，保证能够传完
             times = int(con_len/1024)
             print(times)
-            with open(workdir+"/TMP/"+'tmp.txt', "w") as f:
+            with open(workdir+"TMP/"+'tmp.txt', "w") as f:
                 f.write(dirlist)
             with open(workdir+"/TMP/"+'tmp.txt', "rb") as f:
                 for i in range(times + 1):
@@ -176,10 +185,10 @@ class Action():
     def mkdir(self, communicate_socket, cmd):
         cmd_split = cmd.split(" ")
         Directory = cmd_split[1]
-        if os.path.exists(self.workdir+"\\"+Directory):
+        if os.path.exists(self.workdir+"/"+Directory):
             communicate_socket.send(b"501")   #使用501状态码进行文件夹存在的状态码
         else:
-            os.makedirs(self.workdir+"\\"+Directory)
+            os.makedirs(self.workdir+"/"+Directory)
             communicate_socket.send(b"500")   #使用500状态码表示文件夹创建成功
 
     def pwd(self, communicate_socket, workpath):
@@ -197,7 +206,7 @@ class Action():
         cmd_split = cmd.split(" ")
         path = cmd_split[1]
         if re.match(topdir, path):
-            if os.path.exists(workdir+"\\"+path):
+            if os.path.exists(workdir+"/"+path):
                 return path
             else:
                 communicate_socket.send(b"301") #当前工作目录中不存在此目录
