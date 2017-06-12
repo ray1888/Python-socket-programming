@@ -93,7 +93,28 @@ class Control():
                     print("the diretory has already creadted before")
 
 
-    def InputCmd(self,mode,shost,lport=None,laddr=None):
+    def contentsize(self, communicate_socket):   #把上面的通过接受命令结果返回大小过程封装成函数
+        receive_content_size = communicate_socket.recv(1024)
+        receive_content_size = int(receive_content_size.decode("utf-8"))
+        print("receive_content_size = {}".format(receive_content_size))
+        print(type(receive_content_size))
+        return receive_content_size
+
+    def cmdcontentrecv(self, content_size):    #接受命令返回的结果
+        received_size = 0
+        show_data = ""
+        while received_size < content_size:
+            receive_content = self.s.recv(1024)  # 使用控制通道进行ls等操作的数据传输
+            receive_content = receive_content.decode("utf-8")
+            received_size += 1024
+            show_data += receive_content
+        return show_data
+
+    def recvstatuscode(self, communicate_socket):
+        status_code = communicate_socket.recv(1024)
+        return status_code
+
+    def InputCmd(self, mode, shost, lport=None, laddr=None):
         Flag = True
         while Flag:
             cmd = input("请输入命令")

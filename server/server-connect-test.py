@@ -63,11 +63,23 @@ class Control():
         elif cmd == "ls":
             Action.lsdir(self.conn, self.workdir)
         elif re.match("cd", cmd):
-            self.workdir = Action.cd(self.conn, cmd, self.topdir)
+            result = Action.cd(self.conn, cmd, self.topdir)
+            result = result.split(" ")
+            result_status = result[0]
+            result_path = result[1]
+            self.conn.send(bytes(result_status, encoding="utf-8"))
+            if result_path != "":
+                pathsize = os.path.getsize(result_path)
+                self.conn.send(bytes(str(pathsize), encoding="utf-8"))
+                self.conn.send(bytes(result_path, encoding="utf-8"))
+
+
         elif re.match("mkdir", cmd):
             Action.mkdir(self.conn, cmd, self.workdir)
         elif cmd == "pwd":
             Action.pwd(self.conn, self.workdir)
+
+
 
 
     def CmdRec(self, mode, chost, laddr=None):
@@ -200,20 +212,30 @@ class Action():
         communicate_socket.send(bytes(str(pathsize), encoding="utf-8"))
         communicate_socket.send(bytes(path, encoding="utf-8"))
 
+
     def cd(self, communicate_socket, cmd, topdir, workdir):
-        """
-        在思考如何控制用户使用时不会超过这个目录，为了安全考虑
-        """
+        
         cmd_split = cmd.split(" ")
         path = cmd_split[1]
-        if re.match(topdir, path):
-            if os.path.exists(workdir+"/"+path):
-                return path
+        chdir = workdir+path
+        chdir_path = os.path.dirname(chdir)
+        if os.path.exists(chdir):
+            if topdir in chdir_path:
+                if os.path.isdir(chdir):
+                    return "300 "+path
+                else:
+                    return "303 "  #跳转到的不是文件夹，返回状态码303
             else:
-                communicate_socket.send(b"301") #当前工作目录中不存在此目录
+                return "302 " #超过顶级目录的状态码
+        elif path == "..":
+                upper_dir = os.path.dirname(workdir)
+                return "300 "+upper_dir
+        elif path == ".":
+                return "300 "+workdir
+        elif path == "/":
+                return "300 "+topdir
         else:
-            communicate_socket.send(b"302")  #超过顶级目录的状态码
-
+            return "301 "  ##当前工作目录中不存在此目录
 
 
 if __name__ == "__main__":
