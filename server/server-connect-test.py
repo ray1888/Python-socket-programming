@@ -62,19 +62,21 @@ class Control():
         elif cmd == "ls":
             Action.lsdir(self.conn, self.workdir, self.tmpdir)
         elif re.match("cd", cmd):
-            result = Action.cd(self.conn, cmd, self.topdir, self.workdir)
+            result = Action.cd(cmd, self.topdir, self.workdir)
             result = result.split(" ")
             result_status = result[0]
             result_path = result[1]
-            print("result_status:{}".format(result_status))
-            print("result_path:{}".format(result_path))
-            self.conn.send(bytes(result_status, encoding="utf-8"))
+            print("result_status type:{}".format(type(result_status)))
+            self.conn.send(bytes(result_status, encoding="utf-8"))  #发送状态码
             if result_path != "":
-                pathsize = os.path.getsize(result_path)
+                pathsize = len(result_path)
                 print("result_path:{}".format(result_path))
-                self.conn.send(bytes(str(pathsize), encoding="utf-8"))
-                self.conn.send(bytes(result_path, encoding="utf-8"))
+                print("pathsize = {}".format(pathsize))
                 self.workdir = result_path
+                print("workdir = {}".format(self.workdir))
+                self.conn.send(bytes(str(pathsize), encoding="utf-8")) #发送目录名大小
+                self.conn.send(bytes(result_path, encoding="utf-8"))   #发送目录名称
+
         elif re.match("mkdir", cmd):
             Action.mkdir(self.conn, cmd, self.workdir)
         elif cmd == "pwd":
@@ -98,12 +100,12 @@ class Control():
                 tport = self.CreatPort()  # tport是传输信道的端口
                 print("peer={}".format(self.conn.getpeername()))
                 print("tport = {}".format(tport))
-                self.conn.send(bytes(str(tport), encoding="utf-8"))
+                self.conn.send(bytes(str(tport), encoding="utf-8"))  #发送端口给对方接入
                 tsactive0 = socket.socket()  # tsactive0为等待对方进入的socket
                 tsactive0.bind((laddr, tport))
                 tsactive0.listen(5)
                 tunnel_sock, addrr = tsactive0.accept()  #此处tunnel_sock 为被动模式下的数据信道
-                tunnel_sock.send(b"PASV mode tunnel has been started")
+                tunnel_sock.send(b"PASV mode tunnel has been started")  #
                 self.tunnel_sock = tunnel_sock     #此处tunnel_sock 为被动模式下的数据信道
                 #msg_tun = tsactive1.recv(1024)
                 Active_A = Action()
@@ -210,12 +212,12 @@ class Action():   #操作类，具体存放FTP服务器允许的操作
         communicate_socket.send(bytes(str(pathsize), encoding="utf-8"))
         communicate_socket.send(bytes(path, encoding="utf-8"))
 
-    def cd(self, communicate_socket, cmd, topdir, workdir):
+    def cd(self, cmd, topdir, workdir):
         cmd_split = cmd.split(" ")
         path = cmd_split[1]
         print(path)
         print(type(path))
-        chdir = workdir + path
+        chdir = workdir+path+"/"
         print("workdir {}".format(workdir))
         print("chdir {}".format(chdir))
         chdir_path = os.path.dirname(chdir) + '/'

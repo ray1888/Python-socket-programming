@@ -85,6 +85,7 @@ class Control():
                 status_code = int(status_code)
                 if status_code == 300:
                     content_size = self.contentsize(self.s)
+                    print("content_size:{}".format(content_size))
                     data = self.cmdcontentrecv(content_size, self.s)
                     print("you have change your directory to {}".format(Dir))
                 else:
@@ -108,6 +109,7 @@ class Control():
 
     def recvstatuscode(self, communicate_socket):
         status_code = communicate_socket.recv(1024)
+        print("status_code:{}".format(status_code))
         return status_code
 
     def contentsize(self, communicate_socket):   #把上面的通过接受命令结果返回大小过程封装成函数
@@ -151,7 +153,7 @@ class Control():
                 print(Usage)
                 continue
             if mode == "PASV":  #被动模式,数据通道传输模式
-                serverport = self.s.recv(1024)
+                serverport = self.s.recv(1024)   #接收数据通道端口
                 print("serverport = {}".format(serverport))
                 serverport = int(serverport)
                 print(serverport)
