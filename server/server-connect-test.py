@@ -94,7 +94,6 @@ class Control():
                 self.conn.close()
                 print("Control tunnel has been shut down, the FTP Server quit")
                 break
-
             if mode == "PASV":  #被动模式
                 tport = self.CreatPort()  # tport是传输信道的端口
                 print("peer={}".format(self.conn.getpeername()))
@@ -109,7 +108,6 @@ class Control():
                 #msg_tun = tsactive1.recv(1024)
                 Active_A = Action()
                 self.actiondecide(Active_A, cmd, self.mode)
-
             else: #主动模式
                 lport = 20
                 serverport = self.conn.recv(1024)
@@ -136,8 +134,6 @@ class Action():   #操作类，具体存放FTP服务器允许的操作
         print(type(filename))
         filename = os.path.basename(filename)
         print("filename1:{}".format(filename))
-        #filename = filename.split("/")
-        #print("filename :".format(filename))
         if os.path.exists(workdir+filename):
             #communicate_socket.send(b"0")
             communicate_socket.send(b"101") #put失败状态码为101

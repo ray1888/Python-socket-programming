@@ -65,19 +65,6 @@ class Control():
                 self.receive(self.tunnel_sock_active, filename)
                 self.s.recv(1024)
         else:  # 其他的命令处理,处理上传下载操作外，其余数据传输操作混合在控制信道中进行传输
-            '''
-            receive_content_size = self.s.recv(1024)  # 使用控制信道进行传输大小的确定
-            receive_content_size = int(receive_content_size.decode("utf-8"))
-            print("receive_content_size = {}".format(receive_content_size))
-            print(type(receive_content_size))
-            received_size = 0
-            show_data = ""
-            while received_size < receive_content_size:
-                receive_content = self.s.recv(1024)  # 使用控制通道进行ls等操作的数据传输
-                receive_content = receive_content.decode("utf-8")
-                received_size += 1024
-                show_data += receive_content
-            '''
             if cmd == "ls":
                 status_code = self.recvstatuscode(self.s)
                 print("statuscode = {}".format(status_code))
@@ -119,6 +106,9 @@ class Control():
                 else:
                     print("the diretory has already creadted before")
 
+    def recvstatuscode(self, communicate_socket):
+        status_code = communicate_socket.recv(1024)
+        return status_code
 
     def contentsize(self, communicate_socket):   #把上面的通过接受命令结果返回大小过程封装成函数
         receive_content_size = communicate_socket.recv(1024)
@@ -135,9 +125,7 @@ class Control():
             show_data += receive_content
         return show_data
 
-    def recvstatuscode(self, communicate_socket):
-        status_code = communicate_socket.recv(1024)
-        return status_code
+
 
     def InputCmd(self, mode, shost, lport=None, laddr=None):
         Flag = True
@@ -191,7 +179,7 @@ class Control():
         exist = communicate_socket.recv(1024)
         print(exist)
         print(type(exist))
-        if exist == b'0':
+        if exist == b'101':
             print("the file already exist in FTP Server")
         else:
             communicate_socket.send(bytes(str(filesizes), encoding="utf-8")) #使用通信信道通信上传文件的大小
