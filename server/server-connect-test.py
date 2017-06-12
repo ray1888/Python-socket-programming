@@ -39,7 +39,7 @@ class Control():
         tranport = random.randint(30000, 65535)
         return tranport  #tp为主动模式下被服务器连接的端口
 
-    def actiondecide(self, Action, cmd, mode):   #命令选择
+    def actiondecide(self, Action, cmd, mode):   #命令选择的入口
         if re.match("put", cmd):
             cmd_split = cmd.split(" ")
             filename = cmd_split[1]
@@ -49,7 +49,6 @@ class Control():
                 Action.put(self.workdir, filename, self.conn, self.tunnel_sock)
             else:
                 Action.put(self.workdir, filename, self.conn, self.tunnel_sock)
-
         elif re.match("get", cmd):
             cmd_split = cmd.split(" ")
             filename = cmd_split[1]
@@ -72,7 +71,6 @@ class Control():
                 pathsize = os.path.getsize(result_path)
                 self.conn.send(bytes(str(pathsize), encoding="utf-8"))
                 self.conn.send(bytes(result_path, encoding="utf-8"))
-
         elif re.match("mkdir", cmd):
             Action.mkdir(self.conn, cmd, self.workdir)
         elif cmd == "pwd":

@@ -65,6 +65,7 @@ class Control():
                 self.receive(self.tunnel_sock_active, filename)
                 self.s.recv(1024)
         else:  # 其他的命令处理,处理上传下载操作外，其余数据传输操作混合在控制信道中进行传输
+            '''
             receive_content_size = self.s.recv(1024)  # 使用控制信道进行传输大小的确定
             receive_content_size = int(receive_content_size.decode("utf-8"))
             print("receive_content_size = {}".format(receive_content_size))
@@ -76,19 +77,41 @@ class Control():
                 receive_content = receive_content.decode("utf-8")
                 received_size += 1024
                 show_data += receive_content
+            '''
             if cmd == "ls":
-                print("lsdir : \n {}".format(show_data))
+                status_code = self.recvstatuscode(self.s)
+                status_code = int(status_code)
+                print("statuscode = {}".format(status_code))
+                content_size = self.contentsize(self.s)
+                print("content_size={}".format(content_size))
+                print(type(content_size))
+                if status_code == 400:
+                    data = self.cmdcontentrecv(content_size, self.s)
+                    print("data : \n {}".format(data))
+                    print("lsdir:\n {}".format(data))
             if re.match("cd", cmd):
                 cmd_split = cmd.split(" ")
                 Dir = cmd_split[1]
-                print("you have change your directory to {}".format(Dir))
+                status_code = self.recvstatuscode(self.s)
+                status_code = int(status_code)
+                if status_code == "300":
+                    content_size = self.contentsize(self.s)
+                    data = self.cmdcontentrecv(content_size, self.s)
+                    print("you have change your directory to {}".format(Dir))
+                else:
+                    print("status code is {},please review the usebook".format(status_code))
             if cmd == "pwd":
-                print("current directory is {}".format(show_data))
+                status_code = self.recvstatuscode(self.s)
+                content_size = self.contentsize(self.s)
+                data = self.cmdcontentrecv(content_size, self.s)
+                print("current directory is {}".format(data))
             if re.match("mkdir", cmd):
-                print(receive_content)
-                print(type(receive_content))
-                if receive_content == '500':
-                    print("the diretory has been successfully created")
+                status_code = self.recvstatuscode(self.s)
+                status_code = int(status_code)
+                if status_code == 500:
+                    cmd_split = cmd.split(" ")
+                    dir_name = cmd_split[1]
+                    print("{} has been created".format(dir_name))
                 else:
                     print("the diretory has already creadted before")
 
@@ -96,15 +119,13 @@ class Control():
     def contentsize(self, communicate_socket):   #把上面的通过接受命令结果返回大小过程封装成函数
         receive_content_size = communicate_socket.recv(1024)
         receive_content_size = int(receive_content_size.decode("utf-8"))
-        print("receive_content_size = {}".format(receive_content_size))
-        print(type(receive_content_size))
         return receive_content_size
 
-    def cmdcontentrecv(self, content_size):    #接受命令返回的结果
+    def cmdcontentrecv(self, content_size, communicate_socket):    #接受命令返回的结果
         received_size = 0
         show_data = ""
         while received_size < content_size:
-            receive_content = self.s.recv(1024)  # 使用控制通道进行ls等操作的数据传输
+            receive_content = communicate_socket.recv(1024)  # 使用控制通道进行ls等操作的数据传输
             receive_content = receive_content.decode("utf-8")
             received_size += 1024
             show_data += receive_content
@@ -127,16 +148,15 @@ class Control():
                 break
             elif cmd == "":
                 Usage= """Usage :\
-                        ls --listdir current dir \n  \
-                        cd+' '+dir --change diretory to dir \n \
-                        get filename --download file from server\n \
-                        put LocalfilePath -- upload file to ftpserver\n \
-                        pwd -- show current dir located \n \
-                        mkdir --make diretory in ftp server\n
+                          ls --listdir current dir \n  \
+                          cd+' '+dir --change diretory to dir \n \
+                          get filename --download file from server \n \
+                          put LocalfilePath -- upload file to ftpserver \n \
+                          pwd -- show current dir located \n \
+                          mkdir --make diretory in ftp server\n
                         """
                 print(Usage)
                 continue
-
             if mode == "PASV":  #被动模式,数据通道传输模式
                 serverport = self.s.recv(1024)
                 print("serverport = {}".format(serverport))
@@ -148,7 +168,6 @@ class Control():
                 print(msg)
                 self.tunnel_sock = tunnel_sock
                 self.actiondecide(self.mode, cmd)
-
             else:  #主动模式,数据通道传输模式
                 tport = self.CreatePort(lport)   #tport是传输信道的端口
                 self.s.send(bytes(str(tport), encoding="utf-8"))
