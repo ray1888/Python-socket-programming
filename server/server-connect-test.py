@@ -223,13 +223,14 @@ class Action():   #操作类，具体存放FTP服务器允许的操作
         chdir_path = os.path.dirname(chdir) + '/'
         print("chdir_path {}".format(chdir_path))
         print("topdir {}".format(topdir))
-        if path == "/":
+        if path == "/":  #跳转到共享的根目录,ok
                 return "300 "+topdir
         elif path == "..":
-                upper_dir = os.path.dirname(workdir)
+                print("workdir:{}".format(workdir))
+                upper_dir = os.path.dirname(workdir[:-1])
                 print("upper_dir :{}".format(upper_dir))
                 return "300 "+upper_dir
-        elif path == ".":
+        elif path == ".": #跳转到当前目录,ok
                 return "300 "+workdir
         elif os.path.exists(chdir):
             print(topdir in chdir_path)
