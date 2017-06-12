@@ -73,12 +73,10 @@ class Control():
                 self.conn.send(bytes(str(pathsize), encoding="utf-8"))
                 self.conn.send(bytes(result_path, encoding="utf-8"))
 
-
         elif re.match("mkdir", cmd):
             Action.mkdir(self.conn, cmd, self.workdir)
         elif cmd == "pwd":
             Action.pwd(self.conn, self.workdir)
-
 
 
 
@@ -131,7 +129,7 @@ class Control():
                 print("lport {} is close".format(lport))
 
 
-class Action():
+class Action():   #操作类，具体存放FTP服务器允许的操作
     def put(self, workdir, filename, communicate_socket, data_socket):
         print("filename :".format(filename))
         print(type(filename))
@@ -140,7 +138,8 @@ class Action():
         #filename = filename.split("/")
         #print("filename :".format(filename))
         if os.path.exists(workdir+filename):
-            communicate_socket.send(b"0")
+            #communicate_socket.send(b"0")
+            communicate_socket.send(b"101") #put失败状态码为101
         else:
             communicate_socket.send(b"trying to receive File")
             print("filename = {}".format(filename))
@@ -157,8 +156,8 @@ class Action():
                     f.write(data)
                     received_size += 1024
 
-            print(b'File upload finish,Data tunnel shutdown')
-            communicate_socket.send(b'File upload finish')
+            print(b'File upload finish,Data tunnel shutdown,status code =100')
+            communicate_socket.send(b'100')  #put成功状态码为100
 
     def get(self, workdir, filename, communicate_socket, data_socket):
         sent_data_size = 0
@@ -169,8 +168,8 @@ class Action():
                 data = f.read(1024)
                 sent_data_size += 1024
                 data_socket.send(data)
-        print("File Transfer Finish")
-        communicate_socket.send(b'File Transfer Finish')
+        print("File Transfer Finish, status code=200")
+        communicate_socket.send(b'200')
 
 
     def lsdir(self, communicate_socket, workdir):
@@ -181,7 +180,8 @@ class Action():
             dirlist += i+"\n"
         con_len = sys.getsizeof(dirlist)
         print("dirlist = {}".format(dirlist))
-        communicate_socket.send(bytes(str(con_len), encoding="utf-8"))
+        communicate_socket.send(b"400")    #ls成功状态码400
+        communicate_socket.send(bytes(str(con_len), encoding="utf-8"))   #发送传输内容大小
         if (con_len % 1024) != 0 and (con_len / 1024) != 0:  # 进行大小判断，保证能够传完
             times = int(con_len/1024)
             print(times)
@@ -197,7 +197,7 @@ class Action():
     def mkdir(self, communicate_socket, cmd, workdir):
         cmd_split = cmd.split(" ")
         Directory = cmd_split[1]
-        communicate_socket.send(b"4")
+        #communicate_socket.send(b"4")
         if os.path.exists(workdir+"/"+Directory):
             communicate_socket.send(b"501")   #使用501状态码进行文件夹存在的状态码
         else:
@@ -209,12 +209,12 @@ class Action():
         print("path is {}".format(path))
         print(type(path))
         pathsize = sys.getsizeof(path)
+        communicate_socket.send(b"600")   #pwd成功状态码
         communicate_socket.send(bytes(str(pathsize), encoding="utf-8"))
         communicate_socket.send(bytes(path, encoding="utf-8"))
 
 
     def cd(self, communicate_socket, cmd, topdir, workdir):
-        
         cmd_split = cmd.split(" ")
         path = cmd_split[1]
         chdir = workdir+path
