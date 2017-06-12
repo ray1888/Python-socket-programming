@@ -65,10 +65,10 @@ class Control():
         elif re.match("cd", cmd):
             self.workdir = Action.cd(self.conn, cmd, self.topdir)
         elif re.match("mkdir", cmd):
-            Action.mkdir(self.conn, cmd)
+            Action.mkdir(self.conn, cmd, self.workdir)
         elif cmd == "pwd":
-            self.workdir = Action.pwd(self.conn, self.workdir)
-            self.conn.send(b"currurt dir is {}".format(self.workdir))
+            Action.pwd(self.conn, self.workdir)
+
 
     def CmdRec(self, mode, chost, laddr=None):
         Flag = True
@@ -182,21 +182,22 @@ class Action():
         else:
             communicate_socket.send(dir_list)
 
-    def mkdir(self, communicate_socket, cmd):
+    def mkdir(self, communicate_socket, cmd, workdir):
         cmd_split = cmd.split(" ")
         Directory = cmd_split[1]
-        if os.path.exists(self.workdir+"/"+Directory):
+        communicate_socket.send(b"4")
+        if os.path.exists(workdir+"/"+Directory):
             communicate_socket.send(b"501")   #使用501状态码进行文件夹存在的状态码
         else:
-            os.makedirs(self.workdir+"/"+Directory)
+            os.makedirs(workdir+"/"+Directory)
             communicate_socket.send(b"500")   #使用500状态码表示文件夹创建成功
 
     def pwd(self, communicate_socket, workpath):
         path = workpath
-        print("path = {}".format(path))
+        print("path is {}".format(path))
         print(type(path))
-        filesize = sys.getsizeof(path)
-        communicate_socket.send(bytes(str(filesize), encoding="utf-8"))
+        pathsize = sys.getsizeof(path)
+        communicate_socket.send(bytes(str(pathsize), encoding="utf-8"))
         communicate_socket.send(bytes(path, encoding="utf-8"))
 
     def cd(self, communicate_socket, cmd, topdir, workdir):

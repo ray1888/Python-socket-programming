@@ -72,7 +72,7 @@ class Control():
             received_size = 0
             show_data = ""
             while received_size < receive_content_size:
-                receive_content = self.s.recv(1024)  # 使用数据通道进行ls等操作的数据传输
+                receive_content = self.s.recv(1024)  # 使用控制通道进行ls等操作的数据传输
                 receive_content = receive_content.decode("utf-8")
                 received_size += 1024
                 show_data += receive_content
@@ -84,20 +84,37 @@ class Control():
                 print("you have change your directory to {}".format(Dir))
             if cmd == "pwd":
                 print("current directory is {}".format(show_data))
-
+            if re.match("mkdir", cmd):
+                print(receive_content)
+                print(type(receive_content))
+                if receive_content == '500':
+                    print("the diretory has been successfully created")
+                else:
+                    print("the diretory has already creadted before")
 
 
     def InputCmd(self,mode,shost,lport=None,laddr=None):
         Flag = True
         while Flag:
             cmd = input("请输入命令")
-            self.s.send(bytes(cmd, encoding="utf-8"))
+            self.s.send(bytes(cmd, encoding="utf-8"))  #此处客户端已经把从用户接收到的命令传到了服务器端
             print(cmd)
             print("cmd sent")
             if cmd == "quit":   #进行quit命令判断
                 self.s.close()
                 print("Control tunnel has been shut down, the FTP Client quit")
                 break
+            elif cmd == "":
+                Usage= """Usage :\
+                        ls --listdir current dir \n  \
+                        cd+' '+dir --change diretory to dir \n \
+                        get filename --download file from server\n \
+                        put LocalfilePath -- upload file to ftpserver\n \
+                        pwd -- show current dir located \n \
+                        mkdir --make diretory in ftp server\n
+                        """
+                print(Usage)
+                continue
 
             if mode == "PASV":  #被动模式,数据通道传输模式
                 serverport = self.s.recv(1024)
