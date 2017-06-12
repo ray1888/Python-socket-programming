@@ -11,7 +11,7 @@ class Control():
         self.s.settimeout(timeout)
         self.topdir = "E:/FTP/"        #下一版本会修改为使用配置文件进行设定
         self.workdir = self.topdir
-        self.tmpdir = self.topdir+"/TMP"   #tmpdir、workdir、topdir最后会使用配置文件进行控制
+        self.tmpdir = self.topdir+"TMP/"   #tmpdir、workdir、topdir最后会使用配置文件进行控制
         self.Connect()
         self.CmdRec(self.mode, self.rmaddr, self.host)
 
@@ -60,17 +60,21 @@ class Control():
             self.tunnel_sock.close()      #关闭数据通道
             print("tunnel_sock_close")
         elif cmd == "ls":
-            Action.lsdir(self.conn, self.workdir)
+            Action.lsdir(self.conn, self.workdir, self.tmpdir)
         elif re.match("cd", cmd):
             result = Action.cd(self.conn, cmd, self.topdir, self.workdir)
             result = result.split(" ")
             result_status = result[0]
             result_path = result[1]
+            print("result_status:{}".format(result_status))
+            print("result_path:{}".format(result_path))
             self.conn.send(bytes(result_status, encoding="utf-8"))
             if result_path != "":
                 pathsize = os.path.getsize(result_path)
+                print("result_path:{}".format(result_path))
                 self.conn.send(bytes(str(pathsize), encoding="utf-8"))
                 self.conn.send(bytes(result_path, encoding="utf-8"))
+                self.workdir = result_path
         elif re.match("mkdir", cmd):
             Action.mkdir(self.conn, cmd, self.workdir)
         elif cmd == "pwd":
@@ -158,9 +162,10 @@ class Action():   #操作类，具体存放FTP服务器允许的操作
 
     def get(self, workdir, filename, communicate_socket, data_socket):
         sent_data_size = 0
-        filesize = os.path.getsize(workdir+filename)
+        print("workdir = {}".format(workdir))
+        filesize = os.path.getsize(workdir+'/'+filename)
         communicate_socket.send(bytes(str(filesize), encoding="utf-8"))
-        with open(workdir+filename, 'rb') as f:
+        with open(workdir+'/'+filename, 'rb') as f:
             while filesize > sent_data_size:
                 data = f.read(1024)
                 sent_data_size += 1024
@@ -168,7 +173,7 @@ class Action():   #操作类，具体存放FTP服务器允许的操作
         print("File Transfer Finish, status code=200")
         communicate_socket.send(b'200')
 
-    def lsdir(self, communicate_socket, workdir):
+    def lsdir(self, communicate_socket, workdir, tempdir):
         dir_list = os.listdir(workdir)
         dirlist = ""
         for i in dir_list:
@@ -181,9 +186,9 @@ class Action():   #操作类，具体存放FTP服务器允许的操作
         if (con_len % 1024) != 0 and (con_len / 1024) != 0:  # 进行大小判断，保证能够传完
             times = int(con_len/1024)
             print(times)
-            with open(workdir+"TMP/"+'tmp.txt', "w") as f:
+            with open(tempdir+'tmp.txt', "w") as f:
                 f.write(dirlist)
-            with open(workdir+"/TMP/"+'tmp.txt', "rb") as f:
+            with open(tempdir+'tmp.txt', "rb") as f:
                 for i in range(times + 1):
                     dir_list_div = f.read(1024)
                     communicate_socket.send(dir_list_div)
@@ -213,13 +218,22 @@ class Action():   #操作类，具体存放FTP服务器允许的操作
         cmd_split = cmd.split(" ")
         path = cmd_split[1]
         print(path)
-        chdir = workdir+path
+        print(type(path))
+        chdir = workdir + path
         print("workdir {}".format(workdir))
         print("chdir {}".format(chdir))
-        chdir_path = os.path.dirname(chdir)+'/'
+        chdir_path = os.path.dirname(chdir) + '/'
         print("chdir_path {}".format(chdir_path))
         print("topdir {}".format(topdir))
-        if os.path.exists(chdir):
+        if path == "/":
+                return "300 "+topdir
+        elif path == "..":
+                upper_dir = os.path.dirname(workdir)
+                print("upper_dir :{}".format(upper_dir))
+                return "300 "+upper_dir
+        elif path == ".":
+                return "300 "+workdir
+        elif os.path.exists(chdir):
             print(topdir in chdir_path)
             if (topdir in chdir_path) or (topdir == chdir_path):
                 print("workdir:{}".format(workdir))
@@ -229,13 +243,6 @@ class Action():   #操作类，具体存放FTP服务器允许的操作
                     return "303 "  #跳转到的不是文件夹，返回状态码303
             else:
                 return "302 " #超过顶级目录的状态码
-        elif path == "..":
-                upper_dir = os.path.dirname(workdir)
-                return "300 "+upper_dir
-        elif path == ".":
-                return "300 "+workdir
-        elif path == "/":
-                return "300 "+topdir
         else:
             return "301 "  ##当前工作目录中不存在此目录
 

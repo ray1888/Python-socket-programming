@@ -80,6 +80,8 @@ class Control():
             '''
             if cmd == "ls":
                 status_code = self.recvstatuscode(self.s)
+                print("statuscode = {}".format(status_code))
+                print(type(status_code))
                 status_code = int(status_code)
                 print("statuscode = {}".format(status_code))
                 content_size = self.contentsize(self.s)
@@ -102,7 +104,9 @@ class Control():
                     print("status code is {},please review the usebook".format(status_code))
             if cmd == "pwd":
                 status_code = self.recvstatuscode(self.s)
+                print("status_code:{}".format(status_code))
                 content_size = self.contentsize(self.s)
+                print("content_size:{}".format(content_size))
                 data = self.cmdcontentrecv(content_size, self.s)
                 print("current directory is {}".format(data))
             if re.match("mkdir", cmd):
