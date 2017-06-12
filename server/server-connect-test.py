@@ -62,7 +62,7 @@ class Control():
         elif cmd == "ls":
             Action.lsdir(self.conn, self.workdir)
         elif re.match("cd", cmd):
-            result = Action.cd(self.conn, cmd, self.topdir)
+            result = Action.cd(self.conn, cmd, self.topdir, self.workdir)
             result = result.split(" ")
             result_status = result[0]
             result_path = result[1]
@@ -75,7 +75,6 @@ class Control():
             Action.mkdir(self.conn, cmd, self.workdir)
         elif cmd == "pwd":
             Action.pwd(self.conn, self.workdir)
-
 
 
     def CmdRec(self, mode, chost, laddr=None):
@@ -169,7 +168,6 @@ class Action():   #操作类，具体存放FTP服务器允许的操作
         print("File Transfer Finish, status code=200")
         communicate_socket.send(b'200')
 
-
     def lsdir(self, communicate_socket, workdir):
         dir_list = os.listdir(workdir)
         dirlist = ""
@@ -211,16 +209,22 @@ class Action():   #操作类，具体存放FTP服务器允许的操作
         communicate_socket.send(bytes(str(pathsize), encoding="utf-8"))
         communicate_socket.send(bytes(path, encoding="utf-8"))
 
-
     def cd(self, communicate_socket, cmd, topdir, workdir):
         cmd_split = cmd.split(" ")
         path = cmd_split[1]
+        print(path)
         chdir = workdir+path
-        chdir_path = os.path.dirname(chdir)
+        print("workdir {}".format(workdir))
+        print("chdir {}".format(chdir))
+        chdir_path = os.path.dirname(chdir)+'/'
+        print("chdir_path {}".format(chdir_path))
+        print("topdir {}".format(topdir))
         if os.path.exists(chdir):
-            if topdir in chdir_path:
+            print(topdir in chdir_path)
+            if (topdir in chdir_path) or (topdir == chdir_path):
+                print("workdir:{}".format(workdir))
                 if os.path.isdir(chdir):
-                    return "300 "+path
+                    return "300 "+chdir
                 else:
                     return "303 "  #跳转到的不是文件夹，返回状态码303
             else:

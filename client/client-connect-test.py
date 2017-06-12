@@ -94,7 +94,7 @@ class Control():
                 Dir = cmd_split[1]
                 status_code = self.recvstatuscode(self.s)
                 status_code = int(status_code)
-                if status_code == "300":
+                if status_code == 300:
                     content_size = self.contentsize(self.s)
                     data = self.cmdcontentrecv(content_size, self.s)
                     print("you have change your directory to {}".format(Dir))
@@ -147,13 +147,14 @@ class Control():
                 print("Control tunnel has been shut down, the FTP Client quit")
                 break
             elif cmd == "":
-                Usage= """Usage :\
+                Usage= """Usage: \
                           ls --listdir current dir \n  \
                           cd+' '+dir --change diretory to dir \n \
                           get filename --download file from server \n \
                           put LocalfilePath -- upload file to ftpserver \n \
                           pwd -- show current dir located \n \
-                          mkdir --make diretory in ftp server\n
+                          mkdir --make diretory in ftp server \n \
+                          quit  --quit from the ftpserver
                         """
                 print(Usage)
                 continue
