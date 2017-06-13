@@ -13,12 +13,26 @@ class Control():
         self.topdir = "E:/FTP/"        #下一版本会修改为使用配置文件进行设定
         self.workdir = self.topdir
         self.tmpdir = self.topdir+"TMP/"   #tmpdir、workdir、topdir最后会使用配置文件进行控制
+
+        self.Connect()
+        self.CmdRec(self.mode, self.rmaddr, self.host)
+        '''
+        self.thread_list = []
+        for i in range(3):
+            
+            t = threading.Thread(target=self.run, args=())
+            t.start()
+            self.thread_list.append(t)
+        '''
+
+    def run(self):
+
         self.Connect()
         self.CmdRec(self.mode, self.rmaddr, self.host)
 
     def Connect(self):
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)   #socket的复用
-        host = "0.0.0.0"
+        host = "127.0.0.1"
         port = 21
         self.s.bind((host, port))
         self.s.listen(5)
@@ -116,28 +130,7 @@ class Control():
                 self.actiondecide(Active_A, cmd, self.mode)
                 self.tunnel_sock.close()  # 关闭数据通道
 
-    '''
-    def active_mode_tunnel_open(self):
-        lport = 20
-        serverport = self.conn.recv(1024)
-        serverport = int(serverport)
-        self.tunnel_sock = socket.socket()  # 此处tunnel_sock 为主动模式下的数据通道
-        self.tunnel_sock.bind((laddr, lport))
-        self.tunnel_sock.connect((chost, serverport))
-        self.tunnel_sock.send(b"active mode tunnel has been started")
-        self.tunnel_sock.close()  # 关闭数据通道
 
-    def passive_mode_tunnel_open(self, communicate_socket):
-        tport = self.CreatPort()  # tport是传输信道的端口
-        communicate_socket.send(bytes(str(tport), encoding="utf-8"))  # 发送端口给对方接入
-        tsactive0 = socket.socket()  # tsactive0为等待对方进入的socket
-        tsactive0.bind((laddr, tport))
-        tsactive0.listen(5)
-        tunnel_sock, addrr = tsactive0.accept()  # 此处tunnel_sock 为被动模式下的数据信道
-        tunnel_sock.send(b"PASV mode tunnel has been started")  #
-        self.tunnel_sock = tunnel_sock  # 此处tunnel_sock 为被动模式下的数据信道
-        # msg_tun = tsactive1.recv(1024)
-    '''
 
 class Action():   #操作类，具体存放FTP服务器允许的操作
     def put(self, workdir, filename, communicate_socket, data_socket):
@@ -256,7 +249,6 @@ class Action():   #操作类，具体存放FTP服务器允许的操作
 
 
 if __name__ == "__main__":
-    for i in range(5):
-        Thread = threading.Thread(target=Control())
-        Thread.start()
+    c = Control()
+
     #c = Control()

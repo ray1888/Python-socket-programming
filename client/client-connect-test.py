@@ -37,7 +37,7 @@ class Control():
         print(self.addr)
 
     def CreatePort(self, localport):
-        tranport = random.randint(4096, 65535)
+        tranport = random.randint(4096, 65535)    #端口范围将在配置文件中配置
         if tranport == localport:
             self.CreatePort(localport)
         else:
