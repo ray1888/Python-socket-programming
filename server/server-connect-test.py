@@ -3,6 +3,7 @@ import os
 import sys
 import re
 import random
+import threading
 
 class Control():
     def __init__(self):
@@ -16,6 +17,7 @@ class Control():
         self.CmdRec(self.mode, self.rmaddr, self.host)
 
     def Connect(self):
+        self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)   #socket的复用
         host = "0.0.0.0"
         port = 21
         self.s.bind((host, port))
@@ -76,7 +78,6 @@ class Control():
                 print("workdir = {}".format(self.workdir))
                 self.conn.send(bytes(str(pathsize), encoding="utf-8")) #发送目录名大小
                 self.conn.send(bytes(result_path, encoding="utf-8"))   #发送目录名称
-
         elif re.match("mkdir", cmd):
             Action.mkdir(self.conn, cmd, self.workdir)
         elif cmd == "pwd":
@@ -86,20 +87,13 @@ class Control():
     def CmdRec(self, mode, chost, laddr=None):
         Flag = True
         while Flag:
-            print(self.conn.getsockname())
             cmd = self.conn.recv(1024)
             cmd = cmd.decode("utf-8")
-            print("cmd = {}".format(cmd))
-            print(type(cmd))
-
             if cmd == "quit":   #进行quit命令判断
                 self.conn.close()
-                print("Control tunnel has been shut down, the FTP Server quit")
                 break
             if mode == "PASV":  #被动模式
                 tport = self.CreatPort()  # tport是传输信道的端口
-                print("peer={}".format(self.conn.getpeername()))
-                print("tport = {}".format(tport))
                 self.conn.send(bytes(str(tport), encoding="utf-8"))  #发送端口给对方接入
                 tsactive0 = socket.socket()  # tsactive0为等待对方进入的socket
                 tsactive0.bind((laddr, tport))
@@ -113,12 +107,7 @@ class Control():
             else: #主动模式
                 lport = 20
                 serverport = self.conn.recv(1024)
-                print("serverport = {}".format(serverport))
                 serverport = int(serverport)
-                print("serverport = {}".format(serverport))
-                print(type(serverport))
-                print("lport = {}".format(lport))
-                print("laddr = {}".format(laddr))
                 self.tunnel_sock = socket.socket()    #此处tunnel_sock 为主动模式下的数据通道
                 self.tunnel_sock.bind((laddr, lport))
                 self.tunnel_sock.connect((chost, serverport))
@@ -126,9 +115,29 @@ class Control():
                 Active_A = Action()
                 self.actiondecide(Active_A, cmd, self.mode)
                 self.tunnel_sock.close()  # 关闭数据通道
-                print("tunnel_sock_close")
-                print("lport {} is close".format(lport))
 
+    '''
+    def active_mode_tunnel_open(self):
+        lport = 20
+        serverport = self.conn.recv(1024)
+        serverport = int(serverport)
+        self.tunnel_sock = socket.socket()  # 此处tunnel_sock 为主动模式下的数据通道
+        self.tunnel_sock.bind((laddr, lport))
+        self.tunnel_sock.connect((chost, serverport))
+        self.tunnel_sock.send(b"active mode tunnel has been started")
+        self.tunnel_sock.close()  # 关闭数据通道
+
+    def passive_mode_tunnel_open(self, communicate_socket):
+        tport = self.CreatPort()  # tport是传输信道的端口
+        communicate_socket.send(bytes(str(tport), encoding="utf-8"))  # 发送端口给对方接入
+        tsactive0 = socket.socket()  # tsactive0为等待对方进入的socket
+        tsactive0.bind((laddr, tport))
+        tsactive0.listen(5)
+        tunnel_sock, addrr = tsactive0.accept()  # 此处tunnel_sock 为被动模式下的数据信道
+        tunnel_sock.send(b"PASV mode tunnel has been started")  #
+        self.tunnel_sock = tunnel_sock  # 此处tunnel_sock 为被动模式下的数据信道
+        # msg_tun = tsactive1.recv(1024)
+    '''
 
 class Action():   #操作类，具体存放FTP服务器允许的操作
     def put(self, workdir, filename, communicate_socket, data_socket):
@@ -247,4 +256,7 @@ class Action():   #操作类，具体存放FTP服务器允许的操作
 
 
 if __name__ == "__main__":
-    c = Control()
+    for i in range(5):
+        Thread = threading.Thread(target=Control())
+        Thread.start()
+    #c = Control()
