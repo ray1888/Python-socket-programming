@@ -43,31 +43,31 @@ class Control():
             host, lport = self.conn.getpeername()
             self.host = host
             #self.CmdRec(self.mode, self.rmaddr, self.host)
-            await loop.create_task(cmdrec(self.mode, self.rmaddr, self.host, self.loop, self.conn))
+            await self.cmdrec(self.mode, self.rmaddr, self.loop, self.conn, self.host)
 
 
-    async def cmdrec(self, mode, connect_host, local_addr=None, eventloop, communicate_socket):
+    async def cmdrec(self, mode, connect_host, eventloop, communicate_socket, local_addr=None):
         while 1:
             cmd = await loop.sock_recv(self.conn, 1024)
             cmd = cmd.decode("utf-8")
             if cmd == "quit":  # 进行quit命令判断
                 self.conn.close()
                 break
-            if mode == "PASV" and (cmd == "put" or cmd == 'get'):  # 被动模式
+            if mode == "PASV" and (re.match('put', cmd) or re.match('get', cmd)):  # 被动模式
                 tport = await self.createPort()  # tport是传输信道的端口
                 #communicate_socket.send(bytes(str(tport), encoding="utf-8"))  # 发送端口给对方接入
                 loop.sock_sendall(communicate_socket, bytes(str(tport), encoding="utf-8"))
                 tunnel_sock = socket.socket()  # tunnel_sock为等待对方进入的socket
                 tunnel_sock.bind((local_addr, tport))
                 tunnel_sock.listen(5)
-                tunnel_sock_client, addrr = await loop.sock_accept(tsactive0)    #此处tunnel_sock_client为被动模式下的数据信道
+                tunnel_sock_client, addrr = await loop.sock_accept(tunnel_sock)    #此处tunnel_sock_client为被动模式下的数据信道
                 await loop.sock_sendall(tunnel_sock_client, b"PASV mode tunnel has been started")
                 #tunnel_sock.send(b"PASV mode tunnel has been started")  #
                 self.tunnel_sock = tunnel_sock_client  # 此处tunnel_sock 为被动模式下的数据信道
                 # msg_tun = tsactive1.recv(1024)
                 Active_A = Action()
-                await self.actiondecide(Active_A, cmd, self.mode, communicate_socket)
-            elif (cmd == "put" or cmd == 'get'):  # 主动模式
+                await self.actiondecide(Active_A, cmd,  communicate_socket, self.mode)
+            elif (re.match('put', cmd) or re.match('get', cmd)):  # 主动模式
                 lport = 20
                 serverport = self.conn.recv(1024)
                 serverport = int(serverport)
@@ -78,23 +78,23 @@ class Control():
                 #self.tunnel_sock.send(b"active mode tunnel has been started")
                 await loop.sock_sendall(self.tunnel_sock, b"active mode tunnel has been started")
                 Active_A = Action()
-                await self.actiondecide(Active_A, cmd, self.mode, communicate_socket)
+                await self.actiondecide(Active_A, cmd, communicate_socket, self.mode)
                 self.tunnel_sock.close()  # 关闭数据通道
             else:
                 Active_A = Action()
-                await self.actiondecide(Active_A, cmd, None, communicate_socket)
+                await self.actiondecide(Active_A, cmd, communicate_socket)
 
 
-    async def actiondecide(self, Action, cmd, mode=None, communicate_socket):   #命令选择的入口
+    async def actiondecide(self,Action,cmd,communicate_socket,mode=None):   #命令选择的入口
         if re.match("put", cmd):
             cmd_split = cmd.split(" ")
             filename = cmd_split[1]
             print("action filename:{}".format(filename))
             print(type(filename))
             if mode == "PASV":
-                await Action.put(self.workdir, filename, self.conn, self.tunnel_sock)
+                await Action.put(self.workdir, filename, self.conn, self.tunnel_sock, self.loop)
             else:
-                await Action.put(self.workdir, filename, self.conn, self.tunnel_sock)
+                await Action.put(self.workdir, filename, self.conn, self.tunnel_sock, self.loop)
                 
         elif re.match("get", cmd):
             cmd_split = cmd.split(" ")
@@ -108,12 +108,15 @@ class Control():
             print("tunnel_sock_close")
 
         elif cmd == "ls":
-            data = await Action.lsdir(self.conn, self.workdir, self.tmpdir)
+            data = await Action.lsdir(self.workdir, self.tmpdir)
+            print("data is {}".format(data))
             split_data = data.split("||")
             status_code = split_data[0]
-            sendsize = split_data[1]
+            await loop.sock_sendall(communicate_socket, bytes(status_code, encoding="utf-8"))
+            sendsize = int(split_data[1])
+            print("sendsize is {}".format(sendsize))
+            await loop.sock_sendall(communicate_socket, bytes(str(sendsize), encoding="utf-8"))
             content = split_data[2]
-
             if (sendsize % 1024) != 0 and (sendsize / 1024) != 0:  # 进行大小判断，保证能够传完
                 times = int(sendsize / 1024)
                 print(times)
@@ -166,7 +169,7 @@ class Control():
 
 
 class Action():   #操作类，具体存放FTP服务器允许的操作
-    async def put(self, workdir, filename, communicate_socket, data_socket):
+    async def put(self, workdir, filename, communicate_socket, data_socket, loop):
         print("filename :".format(filename))
         print(type(filename))
         filename = os.path.basename(filename)
@@ -175,10 +178,11 @@ class Action():   #操作类，具体存放FTP服务器允许的操作
             #communicate_socket.send(b"0")
             communicate_socket.send(b"101") #put失败状态码为101
         else:
-            communicate_socket.send(b"trying to receive File")
+            communicate_socket.send(b'100')
             print("filename = {}".format(filename))
             print(type(filename))
-            filesize = communicate_socket.recv(1024)
+            #filesize = communicate_socket.recv(1024)
+            filesize = await loop.sock_recv(communicate_socket, 1024)
             filesize = int(filesize)
             print("filename1 = {}".format(filename))
             print(filesize)
@@ -219,19 +223,7 @@ class Action():   #操作类，具体存放FTP服务器允许的操作
         #communicate_socket.send(bytes(str(con_len), encoding="utf-8"))   #发送传输内容大小
         data = status_code+str(con_len)+"||"+dirlist
         return data
-        '''
-        if (con_len % 1024) != 0 and (con_len / 1024) != 0:  # 进行大小判断，保证能够传完
-            times = int(con_len/1024)
-            print(times)
-            with open(tempdir+'tmp.txt', "w") as f:
-                f.write(dirlist)
-            with open(tempdir+'tmp.txt', "rb") as f:
-                for i in range(times + 1):
-                    dir_list_div = f.read(1024)
-                    communicate_socket.send(dir_list_div)
-        else:
-            communicate_socket.send(dir_list)
-        '''
+
 
     async def mkdir(self, communicate_socket, cmd, workdir):
         cmd_split = cmd.split(" ")
@@ -294,5 +286,5 @@ class Action():   #操作类，具体存放FTP服务器允许的操作
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    c = Control()
+    c = Control(loop)
     loop.run_forever()

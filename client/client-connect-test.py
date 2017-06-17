@@ -14,7 +14,7 @@ class Control():
         self.InputCmd(self.mode, self.host, self.lport, self.addr)
 
     def Modeselection(self):
-        mode = input("请输入模式，主动输入ACT，被动输入PASV")
+        mode = input("请输入模式，主动输入ACT，被动输入PASV\t")
         if mode != "ACT" and mode != "PASV":
             self.Modeselection()
         else:
@@ -43,7 +43,7 @@ class Control():
         else:
             return tranport  #tranport为主动模式下被服务器连接的端口
 
-    def actiondecide(self, mode, cmd):
+    def actiondecide(self, cmd, mode=None):
         if re.match("put", cmd):  # 此处输入的命令为"put 绝对路径/文件"
             cmd_split = cmd.split(" ")
             filename = cmd_split[1]
@@ -68,16 +68,11 @@ class Control():
         else:  # 其他的命令处理,处理上传下载操作外，其余数据传输操作混合在控制信道中进行传输
             if cmd == "ls":
                 status_code = self.recvstatuscode(self.s)
-                print("statuscode = {}".format(status_code))
-                print(type(status_code))
                 status_code = int(status_code)
                 print("statuscode = {}".format(status_code))
                 content_size = self.contentsize(self.s)
-                print("content_size={}".format(content_size))
-                print(type(content_size))
                 if status_code == 400:
                     data = self.cmdcontentrecv(content_size, self.s)
-                    print("data : \n {}".format(data))
                     print("lsdir:\n {}".format(data))
             if re.match("cd", cmd):
                 cmd_split = cmd.split(" ")
@@ -133,7 +128,7 @@ class Control():
     def InputCmd(self, mode, shost, lport=None, laddr=None):
         Flag = True
         while Flag:
-            cmd = input("请输入命令")
+            cmd = input("请输入命令\t")
             self.s.send(bytes(cmd, encoding="utf-8"))  #此处客户端已经把从用户接收到的命令传到了服务器端
             print(cmd)
             print("cmd sent")
@@ -153,30 +148,35 @@ class Control():
                         """
                 print(Usage)
                 continue
-            if mode == "PASV":  #被动模式,数据通道传输模式
-                serverport = self.s.recv(1024)   #接收数据通道端口
-                print("serverport = {}".format(serverport))
-                serverport = int(serverport)
-                print(serverport)
-                tunnel_sock = socket.socket()
-                tunnel_sock.connect((shost, serverport))   #被动模式的数据信道socket,name=tunnel_sock
-                msg = tunnel_sock.recv(1024)
-                print(msg)
-                self.tunnel_sock = tunnel_sock
-                self.actiondecide(self.mode, cmd)
-            else:  #主动模式,数据通道传输模式
-                tport = self.CreatePort(lport)   #tport是传输信道的端口
-                self.s.send(bytes(str(tport), encoding="utf-8"))
-                tsactive0 = socket.socket()  #tsactive0为等待对方进入的socket
-                tsactive0.bind((laddr, tport))
-                tsactive0.listen(5)
-                tunnel_sock_active, addrr = tsactive0.accept()    #主动模式下的数据信道socket,tunnel_sock_active
-                self.tunnel_sock_active = tunnel_sock_active
-                msg_tun = self.tunnel_sock_active.recv(1024)
-                print(msg_tun)
-                self.actiondecide(self.mode, cmd)
-                self.tunnel_sock_active.close()
-                #tsactive0.close()
+            else:
+                if re.match('get', cmd) or re.match('put', cmd):
+                    if mode == "PASV":  #被动模式,数据通道传输模式
+                        serverport = self.s.recv(1024)   #接收数据通道端口
+                        print("serverport = {}".format(serverport))
+                        serverport = int(serverport)
+                        print(serverport)
+                        tunnel_sock = socket.socket()
+                        tunnel_sock.connect((shost, serverport))   #被动模式的数据信道socket,name=tunnel_sock
+                        #msg = tunnel_sock.recv(1024)
+                        #print(msg)
+                        self.tunnel_sock = tunnel_sock
+                        self.actiondecide(cmd, self.mode)
+                    else:  #主动模式,数据通道传输模式
+                        tport = self.CreatePort(lport)   #tport是传输信道的端口
+                        self.s.send(bytes(str(tport), encoding="utf-8"))
+                        tsactive0 = socket.socket()  #tsactive0为等待对方进入的socket
+                        tsactive0.bind((laddr, tport))
+                        tsactive0.listen(5)
+                        tunnel_sock_active, addrr = tsactive0.accept()    #主动模式下的数据信道socket,tunnel_sock_active
+                        self.tunnel_sock_active = tunnel_sock_active
+                        msg_tun = self.tunnel_sock_active.recv(1024)
+                        print(msg_tun)
+                        self.actiondecide(cmd, self.mode)
+                        self.tunnel_sock_active.close()
+                        #tsactive0.close()
+                else:
+                    self.actiondecide(cmd)
+
 
     def send(self, datasocket, file, filesizes, communicate_socket):
         exist = communicate_socket.recv(1024)
