@@ -17,7 +17,7 @@ class Control():
         self.loop = loop
         loop.create_task(self.connect(self.loop))
 
-    async def createPort(self):
+    def createPort(self):
         tranport = random.randint(30000, 65535)
         return tranport  #tp为主动模式下被服务器连接的端口
 
@@ -54,7 +54,7 @@ class Control():
                 self.conn.close()
                 break
             if mode == "PASV" and (re.match('put', cmd) or re.match('get', cmd)):  # 被动模式
-                tport = await self.createPort()  # tport是传输信道的端口
+                tport = self.createPort()  # tport是传输信道的端口
                 #communicate_socket.send(bytes(str(tport), encoding="utf-8"))  # 发送端口给对方接入
                 loop.sock_sendall(communicate_socket, bytes(str(tport), encoding="utf-8"))
                 tunnel_sock = socket.socket()  # tunnel_sock为等待对方进入的socket
