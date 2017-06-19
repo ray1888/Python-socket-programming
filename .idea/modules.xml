@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/Python-socket-programming.iml" filepath="$PROJECT_DIR$/.idea/Python-socket-programming.iml" />
+      <module fileurl="file://$USER_HOME$/Downloads/dashboard/.idea/dashboard.iml" filepath="$USER_HOME$/Downloads/dashboard/.idea/dashboard.iml" />
     </modules>
   </component>
 </project>

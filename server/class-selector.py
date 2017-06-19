@@ -19,7 +19,7 @@ class Control(object):
         self.sock.setblocking(False)
         self.sock.bind((self.host, self.listenport))
         self.sock.listen(100)
-        self.sel.register(self.sock, selectors.EVENT_READ, self.accept)
+        self.sel.register(self.sock, selectors.EVENT_READ, self.accept) #通过注册事件式系统接收到信号时自动触发函数
         while 1:
             events = self.sel.select()
             for key, mask in events:
@@ -64,7 +64,7 @@ class Control(object):
             A = Action()
             self.tranfer_tunnel(client_sock)
             self.sel.modify(client_sock, selectors.EVENT_WRITE,\
-                            A.put(self.workdir, filename, client_sock, self.tunnel_sock))
+                            A.put(self.workdir, filename, client_sock, self.tunnel_sock)) #通过修改注册事件来使得对应事件的函数可以被执行
             self.tunnel_sock.close()  # 关闭数据通道
 
         elif re.match('get', command):
@@ -80,9 +80,10 @@ class Control(object):
             split_cmd = command.split(" ")
             dirname = split_cmd[1]
             A = Action()
-            self.sel.modify(client_sock, selectors.EVENT_WRITE, A.mkdir(client_sock, dirname, self.workdir))
+            self.sel.modify(client_sock, selectors.EVENT_WRITE,\
+                            A.mkdir(client_sock, dirname, self.workdir))
 
-        self.sel.modify(client_sock, selectors.EVENT_READ, self.cmdread)
+        self.sel.modify(client_sock, selectors.EVENT_READ, self.cmdread)  #最后返回原来接收命令的状态
 
     def createPort(self):
         tranport = random.randint(30000, 65535)
