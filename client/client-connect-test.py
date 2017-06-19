@@ -9,16 +9,16 @@ class Control():
     def __init__(self):
         self.s = socket.socket()    #控制信道
         self.pwd = os.getcwd()
-        self.Modeselection()
+        #self.Modeselection()
         self.Connect(self.mode)
         self.InputCmd(self.mode, self.host, self.lport, self.addr)
 
-    def Modeselection(self):
-        mode = input("请输入模式，主动输入ACT，被动输入PASV\t")
-        if mode != "ACT" and mode != "PASV":
-            self.Modeselection()
-        else:
-            self.mode = mode
+    # def Modeselection(self):
+    #     mode = input("请输入模式，主动输入ACT，被动输入PASV\t")
+    #     if mode != "ACT" and mode != "PASV":
+    #         self.Modeselection()
+    #     else:
+    #         self.mode = mode
 
     def Connect(self, mode):
         print(mode)

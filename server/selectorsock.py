@@ -26,7 +26,6 @@ def ls(conn):
     for item2,mask2 in event2:
         print("item2 {}".format(item2))
         print("mask2 {}".format(mask2))
-
     sel.modify(conn, selectors.EVENT_READ, read)
 
 def read(conn):
@@ -63,3 +62,4 @@ while True:
         print("callback is {}".format(callback))
         #callback(key.fileobj, mask)
         callback(key.fileobj)
+

@@ -258,7 +258,7 @@ class Action():   #操作类，具体存放FTP服务器允许的操作
         chdir = workdir+path+"/"
         print("workdir {}".format(workdir))
         print("chdir {}".format(chdir))
-        chdir_path = os.path.dirname(chdir) + '/'
+        chdir_path = os.path.dirname(chdir[:-1])
         print("chdir_path {}".format(chdir_path))
         print("topdir {}".format(topdir))
         if path == "/":  #跳转到共享的根目录,ok
