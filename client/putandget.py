@@ -4,7 +4,7 @@ import re
 
 if __name__ == "__main__":
     sock = socket.socket()
-    sock.connect(("127.0.0.1", 25699))
+    sock.connect(("127.0.0.1", 17773))
     while 1:
         cmd = input("please input sth \t")
         split_cmd = cmd.split(" ")

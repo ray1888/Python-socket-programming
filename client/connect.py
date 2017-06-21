@@ -2,7 +2,7 @@ import socket
 
 if __name__ == "__main__":
     sock = socket.socket()
-    sock.connect(("127.0.0.1", 25699))
+    sock.connect(("127.0.0.1", 17773))
     while 1:
         data = input("please input sth \t")
         data = bytes(data, encoding="utf-8")

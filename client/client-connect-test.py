@@ -23,7 +23,7 @@ class Control():
     def Connect(self, mode):
         print(mode)
         host = "127.0.0.1"
-        port = 21
+        port = 25699
         self.host = host
         self.s.connect((host, port))
         welcome = self.s.recv(1024)
@@ -128,6 +128,9 @@ class Control():
     def InputCmd(self, mode, shost, lport=None, laddr=None):
         Flag = True
         while Flag:
+            mode = self.s.recv(1024)
+            mode = mode.decode("ascii")
+            self.mode = mode
             cmd = input("请输入命令\t")
             self.s.send(bytes(cmd, encoding="utf-8"))  #此处客户端已经把从用户接收到的命令传到了服务器端
             print(cmd)
